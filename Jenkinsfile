@@ -1,22 +1,29 @@
 pipeline {
     agent any
 
+    environment {
+        MAVEN_HOME = 'C:\\Program Files\\Apache\\maven-3.9.3' // falls Maven installiert
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Nadolze/MediTrack.git'
+                // holt den Code vom GitHub-Repo
+                git branch: 'main', url: 'https://github.com/Nadolze/MediTrack.git'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'mvn clean package'
+                // baut das Projekt
+                bat 'mvn clean package'
             }
         }
 
         stage('Test') {
             steps {
-                sh 'mvn test'
+                // führt die Tests aus
+                bat 'mvn test'
             }
         }
     }
