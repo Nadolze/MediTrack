@@ -16,4 +16,10 @@ public class CalculatorTest {
         Calculator calc = new Calculator();
         assertEquals(1, calc.subtract(3, 2), "3 - 2 sollte 1 ergeben");
     }
+
+    @Test
+    void testMultiply() {
+        Calculator calc = new Calculator();
+        assertEquals(6, calc.multiply(3, 2), "3 * 2 sollte 6 ergeben");
+    }
 }
