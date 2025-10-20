@@ -2,21 +2,47 @@
 
 
 
-\*\*CI Pipeline mit Github Actions\*\*
+\## CI/CD-Pipeline
 
-Die Pipeline wird über ci.yml im Repository beschrieben.
+Diese Projekt verwendet GitHub Actions.
 
-Der Workflow wird bei jedem Push auf jeden Branch und jede Pull Request in main gestartet.
 
-Für den Test wird der Repository überprüft, eine Java-Umgebung eingerichtet, Maven-Dependencies gecached, das Projekt gebaut und alle JUnit-Tests ausgeführt. Bei erfolgreichen Tests wird eine Dokumentation erstellt.
 
-Durchgeführte Tests:
+1. \*\*Build \& Unit-Tests\*\*
 
-Build
+&nbsp;  - Jede Änderung an beliebigen Branches (`push`) wird automatisch gebaut.
 
-Unit-Test
+&nbsp;  - Unit-Tests werden mit \*\*JUnit 5\*\* ausgeführt.
 
-Integrationstest
+&nbsp;  - Maven wird verwendet, um das Projekt zu bauen:  
 
-Deployment-Test
+&nbsp;    ```bash
+
+&nbsp;    mvn clean verify
+
+&nbsp;    ```
+
+
+
+2\. \*\*Integrationstests\*\*
+
+&nbsp;  - Werden im Profil `integration-test` ausgeführt.
+
+&nbsp;  - Prüfen das Zusammenspiel von Komponenten, z. B. Services mit Repositories.
+
+&nbsp;  - Maven-Befehl:
+
+&nbsp;    ```bash
+
+&nbsp;    mvn verify -Pintegration-test
+
+&nbsp;    ```
+
+
+
+3\. \*\*Dokumentation\*\*
+
+&nbsp;  - Wenn Änderungen im `main`-Branch gemerged werden, wird automatisch \*\*Javadoc\*\* generiert.
+
+&nbsp;  - Das Ergebnis wird als Artefakt hochgeladen: `target/site/apidocs`.
 

@@ -14,7 +14,7 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- RestAssured für Deployment-/API-Tests -->
+    <!-- RestAssured für E2E-Tests -->
     <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
@@ -22,7 +22,7 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Spring Boot Test-Starter mit Version -->
+    <!-- Spring Boot Test Starter -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -39,6 +39,41 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.1.2</version>
       </plugin>
+      <!-- Failsafe für Integration- & E2E-Tests -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.1.2</version>
+      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- Integrationstest-Profil -->
+    <profile>
+      <id>integration-test</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>**/*IT.java</include>
+              </includes>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+      </profiles>
 </project>
