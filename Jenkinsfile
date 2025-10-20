@@ -9,7 +9,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Nadolze/MediTrack.git'
+                git branch: 'main',
+                    url: 'https://github.com/Nadolze/MediTrack.git',
+                    credentialsId: 'github-creds'
             }
         }
 
@@ -27,14 +29,10 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                // Stoppe bestehenden Dienst (falls vorhanden)
-                sh "systemctl stop meditrack || true"
-
-                // Kopiere neues JAR
+                // systemctl stop/start benötigt sudo ohne Passwort
+                sh "sudo systemctl stop meditrack || true"
                 sh "cp target/${JAR_NAME} ${DEPLOY_DIR}/"
-
-                // Starte Service neu
-                sh "systemctl start meditrack"
+                sh "sudo systemctl start meditrack"
             }
         }
     }
