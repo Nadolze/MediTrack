@@ -10,7 +10,7 @@ Diese Projekt verwendet GitHub Actions.
 
 1. **Build \& Unit-Tests**
 
-&nbsp;  - Jede Änderung an beliebigen Branches (`push`) wird automatisch gebaut.
+&nbsp;  - Jede Änderung an beliebigen Branches (push) wird automatisch gebaut.
 
 &nbsp;  - Unit-Tests werden mit JUnit 5 ausgeführt.
 
