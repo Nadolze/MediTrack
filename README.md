@@ -10,3 +10,13 @@ Der Workflow wird bei jedem Push auf jeden Branch und jede Pull Request in main 
 
 Für den Test wird der Repository überprüft, eine Java-Umgebung eingerichtet, Maven-Dependencies gecached, das Projekt gebaut und alle JUnit-Tests ausgeführt. Bei erfolgreichen Tests wird eine Dokumentation erstellt.
 
+Durchgeführte Tests:
+
+Build
+
+Unit-Test
+
+Integrationstest
+
+Deployment-Test
+
