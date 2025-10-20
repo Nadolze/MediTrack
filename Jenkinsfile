@@ -2,45 +2,49 @@ pipeline {
     agent any
 
     environment {
-        MAVEN_HOME = 'C:\\Program Files\\Apache\\maven-3.9.11'
-        PATH = "${env.MAVEN_HOME}\\bin;${env.PATH}"
+        DEPLOY_DIR = "/opt/meditrack"
+        JAR_NAME = "mediweb-0.0.1-SNAPSHOT.jar"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo '🔄 Hole Quellcode von GitHub...'
                 git branch: 'main', url: 'https://github.com/Nadolze/MediTrack.git'
             }
         }
 
         stage('Build') {
             steps {
-                echo '🏗️ Baue das Projekt...'
-                bat 'mvn -B clean package'
+                sh 'mvn clean package'
             }
         }
 
         stage('Test') {
             steps {
-                echo '🧪 Führe Unit-Tests aus...'
-                bat 'mvn test'
+                sh 'mvn test'
             }
         }
 
-        stage('Ergebnis') {
+        stage('Deploy') {
             steps {
-                echo '📦 Build abgeschlossen — prüfe Testergebnisse!'
+                // Stoppe bestehenden Dienst (falls vorhanden)
+                sh "systemctl stop meditrack || true"
+
+                // Kopiere neues JAR
+                sh "cp target/${JAR_NAME} ${DEPLOY_DIR}/"
+
+                // Starte Service neu
+                sh "systemctl start meditrack"
             }
         }
     }
 
     post {
         success {
-            echo '✅ Build und Tests erfolgreich!'
+            echo "✅ Build, Test und Deployment erfolgreich!"
         }
         failure {
-            echo '❌ Fehler beim Build oder Test.'
+            echo "❌ Fehler im Build/Test/Deployment!"
         }
     }
 }
