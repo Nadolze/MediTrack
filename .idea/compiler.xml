@@ -9,8 +9,12 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="my-ci-demo" />
+        <module name="mediweb" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="MediTrack" target="1.7" />
+      <module name="my-ci-demo" target="17" />
+    </bytecodeTargetLevel>
   </component>
 </project>
