@@ -16,7 +16,7 @@ pipeline {
                     // Port dynamisch bestimmen: main=8080, sonst 808X
                     def port = (branch == 'main') ? '8080' :
                                (8080 + Math.abs(branch.hashCode() % 100)).toString()
-
+                    
                     echo "Deploying branch ${branch} on port ${port}"
 
                     // Zielpfad dynamisch bestimmen
