@@ -76,9 +76,9 @@ MediTrack/
 ## 🧩 Domänenmodell (Entwurf)
 
 ```mermaid
+```mermaid
 erDiagram
     USER ||--o{ PATIENT : verwaltet
-    USER ||--o{ ARZT : verwaltet
     PATIENT ||--o{ VITALREADING : enthält
     PATIENT ||--o{ TREATMENT : hat
     ALERTRULE ||--o{ ALERT : erzeugt
@@ -94,23 +94,6 @@ erDiagram
         id int
         geburtsdatum date
         krankengeschichte string
-    }
-    KRANKENGESCHICHTE {
-        id int
-        kankheit KRANKHEIT
-        }
-    KRANKHEIT {
-        id int
-        name string
-        diagnosedatum date
-        treatment TREATMENT
-        akut boolean
-        ende date
-    }   
-    ARZT {
-        id int
-        personalnumer int
-        patienten PATIENT
     }
     VITALREADING {
         id int
@@ -136,6 +119,7 @@ erDiagram
         erstellt_am datetime
         status string
     }
+
 ```
 ## 🧩 Domänenmodell (Entwurf2)
 
