@@ -81,37 +81,37 @@ erDiagram
     USER ||--o{ ALERT : erhält
 
     USER {
-        int id
-        string name
-        string email
-        string role
+        id int
+        name string
+        email string
+        role string
     }
     PATIENT {
-        int id
-        date geburtsdatum
-        string krankengeschichte
+        id int
+        geburtsdatum date
+        krankengeschichte string
     }
     VITALREADING {
-        int id
-        string typ
-        float wert
-        string einheit
-        datetime timestamp
+        id int
+        typ string
+        wert float
+        einheit string
+        timestamp datetime
     }
     TREATMENT {
-        int id
-        string art
-        string beschreibung
-        date datum
+        id int
+        art string
+        beschreibung string
+        datum date
     }
     ALERTRULE {
-        int id
-        string typ
-        string operator
-        float schwelle
+        id int
+        typ string
+        operator string
+        schwelle float
     }
     ALERT {
-        int id
-        datetime erstellt_am
-        string status
+        id int
+        erstellt_am datetime
+        status string
     }
