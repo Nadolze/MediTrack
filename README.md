@@ -70,11 +70,15 @@ MediTrack/
 
 ---
 
+## Eventstorming
+<img src="https://github.com/Nadolze/MediTrack/tree/main/Eventstorming.png">
+
 ## 🧩 Domänenmodell (Entwurf)
 
 ```mermaid
 erDiagram
     USER ||--o{ PATIENT : verwaltet
+    USER ||--o{ ARZT : verwaltet
     PATIENT ||--o{ VITALREADING : enthält
     PATIENT ||--o{ TREATMENT : hat
     ALERTRULE ||--o{ ALERT : erzeugt
@@ -90,6 +94,23 @@ erDiagram
         id int
         geburtsdatum date
         krankengeschichte string
+    }
+    KRANKENGESCHICHTE {
+        id int
+        kankheit KRANKHEIT
+        }
+    KRANKHEIT {
+        id int
+        name string
+        diagnosedatum date
+        treatment TREATMENT
+        akut boolean
+        ende date
+    }   
+    ARZT {
+        id int
+        personalnumer int
+        patienten PATIENT
     }
     VITALREADING {
         id int
@@ -115,3 +136,86 @@ erDiagram
         erstellt_am datetime
         status string
     }
+```
+## 🧩 Domänenmodell (Entwurf2)
+
+```mermaid
+erDiagram
+    USER ||--o{ PATIENT : verwaltet
+    USER ||--o{ ARZT : verwaltet
+    TREATMENT ||--o{ VITALREADING : enthält
+    ALERTRULE ||--o{ ALERT : erzeugt
+    ARZT ||--o{ ALERT : erhält
+    ARZT ||--o{ PATIENT : betreut
+    PATIENT ||--o{ ALERT : erhält
+    TREATMENT ||--o{ ALERTRULE : definiert
+    PATIENT ||--o{ KRANKENGESCHICHTE : hat
+    KRANKENGESCHICHTE ||--o{ KRANKHEIT : hat
+    KRANKHEIT ||--o{ TREATMENT : bedarf
+    VITALREADING ||--o{ ALERT : löst_aus
+    ARZT ||--o{ VITALREADING : führt_durch 
+
+
+    USER {
+        id int
+        name string
+        email string
+        role string
+    }
+    PATIENT {
+        id int
+        geburtsdatum date
+        krankengeschichte KRANKENGESCHICHTE
+    }
+    KRANKENGESCHICHTE {
+        id int
+        kankheit KRANKHEIT
+        }
+    KRANKHEIT {
+        id int
+        name string
+        diagnosedatum date
+        treatment TREATMENT
+        aktiv boolean
+        ende date
+    }   
+    ARZT {
+        id int
+        personalnumer int
+        patienten PATIENT
+    }
+    VITALREADING {
+        id int
+        typ string
+        wert float
+        einheit string
+        timestamp datetime
+    }
+    TREATMENT {
+        id int
+        art string
+        beschreibung string
+        datum date
+        vitalreading VITALREADING
+    }
+    ALERTRULE {
+        id int
+        typ string
+        operator string
+        schwelle float
+    }
+    ALERT {
+        id int
+        erstellt_am datetime
+        status string
+    }
+```
+
+## 🧩 Bounded Context (Entwurf)
+Hier müssen noch die Bounded Contexts erstellt werden. 
+Ich sehe die Contexts in folgenden Bereichen:
+1) Registrierungsvorgang Arzt/Patient
+2) Stammdatenerfassung
+3) Krankheitshistorie
+4) Erfassung Werte
+5) Alarmsystem / Notification-Center
