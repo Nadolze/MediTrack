@@ -76,7 +76,6 @@ MediTrack/
 ## 🧩 Domänenmodell (Entwurf)
 
 ```mermaid
-```mermaid
 erDiagram
     USER ||--o{ PATIENT : verwaltet
     PATIENT ||--o{ VITALREADING : enthält
