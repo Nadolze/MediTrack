@@ -205,9 +205,9 @@ Ich sehe die Contexts in folgenden Bereichen:
 
 | Bounded Context| Verantwortlichkeiten| Beziehung zu anderen BCs|
 |---------------|--------|----------------|
-| Registrierungsvorgang  | -     | -     |
-| Stammdatenerfassung | -     | -    |
-| Krankheitshistorie| -     | - |
-| Erfassung Werte| -     | - |
-| Alarmsystem / Notification-Center| -     | - |
+| Registrierungsvorgang  | Patient/Arzt kann sich registrieren und anmelden. | Vorraussetzung für alle anderen BCs  |
+| Stammdatenerfassung | Patient kann seine Daten (Name, Geburtsdatum, Krankheitsgeschichte) angeben und verwalten. | Die angegebene Krankheitsgeschichte wird vom BC "Krankheitshistorie" verwendet und ggf. erweitert |
+| Krankheitshistorie| Patient/Arzt können auf Krankheitshistorien zugreifen und diese erweitern.| - |
+| Erfassung Werte| Die Vitalwerte vom Patienten können erfasst und gespeichert werden.| Wenn der erfasste Wert seinen Schwellenwert übersteigt, wird das Alarmsystem aktiviert. |
+| Alarmsystem / Notification-Center| Es werden kritische Vitalwerte erkannt und der Arzt wird benachrichtigt.| - |
 
