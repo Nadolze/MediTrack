@@ -203,9 +203,11 @@ Ich sehe die Contexts in folgenden Bereichen:
 4) Erfassung Werte
 5) Alarmsystem / Notification-Center
 
-Bounded Context,Verantwortlichkeiten,Beziehung zu anderen BCs
-"Registrierungsvorgang Arzt/Patient","Row 1, Col 2","Row 1, Col 3"
-"Stammdatenerfassung","Row 2, Col 3"
-"Krankenhistorie","Row 3, Col 2","Row 3, Col 3"
-"Erfassung Werte","Row 3, Col 2","Row 3, Col 3"
-"Alarmsystem / Notification-Center","Row 3, Col 2","Row 3, Col 3"
+| Bounded Context| Verantwortlichkeiten| Beziehung zu anderen BCs|
+|---------------|--------|----------------|
+| Registrierungsvorgang  | -     | -     |
+| Stammdatenerfassung | -     | -    |
+| Krankheitshistorie| -     | - |
+| Erfassung Werte| -     | - |
+| Alarmsystem / Notification-Center| -     | - |
+
