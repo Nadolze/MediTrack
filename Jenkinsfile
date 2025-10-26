@@ -109,11 +109,22 @@ pipeline {
                         sleep time: 5, unit: 'SECONDS'
 
                         try {
-                            def response = isUnix()
-                                ? sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
-                                : bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
+                            def response = ""
+                            if (isUnix()) {
+                                response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
+                            } else {
+                                response = bat(
+                                    script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"",
+                                    returnStdout: true
+                                ).trim()
+                            }
 
-                            if (response == '200') {
+                            // Nur die letzte Zeile extrahieren (enthält Statuscode)
+                            response = response.tokenize('\n').last().trim()
+
+                            echo "ℹ️ HTTP Status: ${response}"
+
+                            if (response.contains("200") || response.contains("302")) {
                                 healthy = true
                                 break
                             } else {
