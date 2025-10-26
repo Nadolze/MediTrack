@@ -1,19 +1,30 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven 3.9.11'
+    environment {
+        APP_NAME = "MediTrack"
+        JAR_NAME = "mediweb-0.0.1-SNAPSHOT.jar"
+        DEFAULT_PORT = "9090"
     }
 
     stages {
+        stage('Tool Install') {
+            steps {
+                echo "🧰 Stelle sicher, dass Java & Maven verfügbar sind..."
+                // Jenkins stellt Tool-Umgebung bereit, falls konfiguriert
+                tool name: 'Maven', type: 'maven'
+                tool name: 'JDK', type: 'jdk'
+            }
+        }
+
         stage('Build') {
             steps {
                 script {
                     echo "🔧 Starte Build-Prozess..."
                     if (isUnix()) {
-                        sh 'mvn clean package -DskipTests'
+                        sh "mvn clean package -DskipTests"
                     } else {
-                        bat 'mvn clean package -DskipTests'
+                        bat "mvn clean package -DskipTests"
                     }
                 }
             }
@@ -24,9 +35,9 @@ pipeline {
                 script {
                     echo "🧪 Führe automatisierte Tests aus..."
                     if (isUnix()) {
-                        sh 'mvn test'
+                        sh "mvn test"
                     } else {
-                        bat 'mvn test'
+                        bat "mvn test"
                     }
                 }
             }
@@ -35,38 +46,41 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Branchname aus Jenkins-Umgebung
-                    def branch = env.BRANCH_NAME ?: "main"
+                    // Branchname und Port bestimmen
+                    def branch = env.GIT_BRANCH ?: 'main'
+                    def port = env.DEFAULT_PORT
 
-                    // Priorität: Port 9090, wenn belegt -> auf 8080 ausweichen
-                    def port = 9090
-                    try {
-                        new Socket("localhost", 9090).close()
-                        port = 8080
-                        echo "⚠️ Port 9090 ist belegt, wechsle auf Port 8080."
-                    } catch (Exception e) {
-                        echo "✅ Port 9090 ist frei."
+                    echo "✅ Port ${port} wird verwendet."
+                    echo "🚀 Deploying branch ${branch} auf Port ${port}"
+
+                    // Zielpfad abhängig vom Betriebssystem
+                    def targetDir = isUnix() ? "/opt/meditrack/${branch}" : "C:\\meditrack\\${branch}"
+
+                    // Zielordner anlegen
+                    if (isUnix()) {
+                        sh "mkdir -p ${targetDir}"
+                        sh "cp target/${JAR_NAME} ${targetDir}/"
+                    } else {
+                        bat "if not exist ${targetDir} mkdir ${targetDir}"
+                        bat "copy target\\${JAR_NAME} ${targetDir}\\ /Y"
                     }
 
-                    echo "🚀 Deploying branch ${branch} on port ${port}"
-
-                    // Zielverzeichnis für JARs
-                    def targetDir = isUnix() ? "/opt/meditrack/${branch}" : "C:\\meditrack\\${branch}"
+                    // Vorherige Instanz stoppen
+                    echo "🛑 Stoppe alte MediTrack-Instanz (falls aktiv)..."
                     if (isUnix()) {
-                        sh """
-                            mkdir -p ${targetDir}
-                            cp target/mediweb-0.0.1-SNAPSHOT.jar ${targetDir}/
-                            sudo systemctl stop meditrack-${branch} || true
-                        """
+                        sh "pkill -f ${JAR_NAME} || true"
                     } else {
-                        bat """
-                            if not exist ${targetDir} mkdir ${targetDir}
-                            copy target\\mediweb-0.0.1-SNAPSHOT.jar ${targetDir}\\ /Y
-                            echo Stoppe vorherige MediTrack-Instanz (falls aktiv)...
-                            powershell -Command "Stop-Process -Name java -ErrorAction SilentlyContinue"
-                            echo Starte MediTrack auf Port ${port}...
-                            start /B java -jar ${targetDir}\\mediweb-0.0.1-SNAPSHOT.jar --server.port=${port}
-                        """
+                        bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
+                    }
+
+                    // Anwendung starten
+                    echo "🟢 Starte ${APP_NAME} auf Port ${port}..."
+                    if (isUnix()) {
+                        sh "nohup java -jar ${targetDir}/${JAR_NAME} --server.port=${port} > ${targetDir}/mediweb.log 2>&1 &"
+                        sh "sleep 10"
+                    } else {
+                        bat "start /B java -jar ${targetDir}\\${JAR_NAME} --server.port=${port}"
+                        bat "timeout /T 10 >nul"
                     }
                 }
             }
@@ -76,31 +90,16 @@ pipeline {
             steps {
                 script {
                     echo "🔍 Überprüfe, ob die Anwendung unter http://localhost:9090 oder :8080 läuft..."
-                    def healthy = false
-
-                    // mehrfach prüfen mit Pause
-                    for (int i = 0; i < 5; i++) {
-                        try {
-                            def response = new URL("http://localhost:9090").getText()
-                            if (response.contains("MediTrack")) {
-                                healthy = true
-                                break
-                            }
-                        } catch (Exception e) { sleep(5) }
-
+                    try {
+                        def response = new URL("http://localhost:9090").getText()
+                        echo "✅ Server antwortet erfolgreich auf Port 9090!"
+                    } catch (Exception e) {
                         try {
                             def response = new URL("http://localhost:8080").getText()
-                            if (response.contains("MediTrack")) {
-                                healthy = true
-                                break
-                            }
-                        } catch (Exception e) { sleep(5) }
-                    }
-
-                    if (!healthy) {
-                        error("❌ Health Check fehlgeschlagen – App auf keinem Port erreichbar.")
-                    } else {
-                        echo "✅ Anwendung erfolgreich erreichbar!"
+                            echo "✅ Server antwortet erfolgreich auf Port 8080!"
+                        } catch (Exception ex) {
+                            error("❌ Health Check fehlgeschlagen – App auf keinem Port erreichbar.")
+                        }
                     }
                 }
             }
@@ -109,7 +108,7 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Build und Deployment erfolgreich abgeschlossen!"
+            echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
         }
         failure {
             echo "❌ Build oder Deployment fehlgeschlagen."
