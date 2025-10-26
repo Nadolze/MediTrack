@@ -60,7 +60,7 @@ pipeline {
                     def deployDir = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}" : "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
                     def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-                    // 🔍 Portprüfung (neu & stabil unter Windows)
+                    // 🔍 Portprüfung (stabil unter Windows & Linux)
                     def portFree = false
                     if (isUnix()) {
                         def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
@@ -90,7 +90,11 @@ pipeline {
                         bat "if not exist ${deployDir} mkdir ${deployDir}"
                         bat "copy target\\${appJar} ${deployDir}\\ /Y"
                         bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
-                        bat "powershell -Command \"Start-Process java -ArgumentList '-jar','${deployDir}\\${appJar}','--server.port=${port}' -WindowStyle Hidden\""
+
+                        // 🚀 Asynchroner Start (kein Hängen mehr!)
+                        bat """
+powershell -Command "Start-Job { Start-Process java -ArgumentList '-jar','${deployDir}\\${appJar}','--server.port=${port}' -WindowStyle Hidden } | Out-Null"
+"""
                     }
 
                     echo "🚀 ${APP_NAME} gestartet auf Port ${port}"
