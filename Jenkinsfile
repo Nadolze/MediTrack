@@ -60,7 +60,7 @@ pipeline {
                     def deployDir = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}" : "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
                     def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-                    // 🔍 Portprüfung (stabil unter Windows & Linux)
+                    // 🔍 Portprüfung (Windows + Linux)
                     def portFree = false
                     if (isUnix()) {
                         def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
@@ -80,7 +80,7 @@ pipeline {
                         echo "✅ Port ${port} ist frei."
                     }
 
-                    // 📁 Deployment & Start
+                    // 📁 Deployment
                     if (isUnix()) {
                         sh "mkdir -p ${deployDir}"
                         sh "cp target/${appJar} ${deployDir}/"
@@ -91,9 +91,9 @@ pipeline {
                         bat "copy target\\${appJar} ${deployDir}\\ /Y"
                         bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
 
-                        // 🚀 Asynchroner Start (kein Hängen mehr!)
+                        // 💥 Neuer, wirklich asynchroner Start (funktioniert auch bei Jenkins-Dienst!)
                         bat """
-powershell -Command "Start-Job { Start-Process java -ArgumentList '-jar','${deployDir}\\${appJar}','--server.port=${port}' -WindowStyle Hidden } | Out-Null"
+powershell -Command "Start-Process java -ArgumentList '-jar','${deployDir}\\${appJar}','--server.port=${port}' -NoNewWindow -PassThru | Out-Null"
 """
                     }
 
