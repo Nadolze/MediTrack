@@ -6,6 +6,7 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 echo "📦 Hole Code aus Git..."
@@ -38,6 +39,7 @@ pipeline {
                 script {
                     echo "🧪 Führe Tests aus..."
                     def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
+
                     if (isUnix()) {
                         sh "${mvnCmd} test"
                     } else {
@@ -58,13 +60,13 @@ pipeline {
                     def deployDir = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}" : "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
                     def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-                    // Prüfe Portverfügbarkeit
+                    // 🔍 Prüfe, ob Port frei ist
                     def portFree = false
                     if (isUnix()) {
                         def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
                         portFree = result == ""
                     } else {
-                        def result = bat(script: "netstat -ano | findstr :${port}", returnStdout: true).trim()
+                        def result = bat(script: "netstat -ano | findstr :${port} || exit /B 0", returnStdout: true).trim()
                         portFree = result == ""
                     }
 
@@ -75,7 +77,7 @@ pipeline {
                         echo "✅ Port ${port} ist frei."
                     }
 
-                    // Deployment-Verzeichnis erstellen
+                    // 📁 Deployment-Verzeichnis
                     if (isUnix()) {
                         sh "mkdir -p ${deployDir}"
                         sh "cp target/${appJar} ${deployDir}/"
@@ -100,19 +102,26 @@ pipeline {
                     def port = env.ACTIVE_PORT ?: "9090"
                     echo "🔍 Überprüfe Erreichbarkeit auf http://localhost:${port}"
 
-                    // Warte kurz auf App-Start
-                    sleep time: 6, unit: 'SECONDS'
-
+                    // Wiederholungsversuch (max. 3x)
                     def healthy = false
-                    try {
-                        def response = isUnix()
-                            ? sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
-                            : bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
-                        if (response == '200') {
-                            healthy = true
+                    for (int i = 1; i <= 3; i++) {
+                        echo "⏳ Versuch ${i}..."
+                        sleep time: 5, unit: 'SECONDS'
+
+                        try {
+                            def response = isUnix()
+                                ? sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
+                                : bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
+
+                            if (response == '200') {
+                                healthy = true
+                                break
+                            } else {
+                                echo "⚠️ Antwort war: ${response}"
+                            }
+                        } catch (err) {
+                            echo "⚠️ Keine Antwort erhalten, versuche erneut..."
                         }
-                    } catch (err) {
-                        echo "⚠️ Keine Antwort erhalten, versuche erneut..."
                     }
 
                     if (!healthy) {
@@ -133,7 +142,7 @@ pipeline {
             echo "❌ Build oder Deployment fehlgeschlagen."
         }
         always {
-            echo "🏁 Pipeline beendet."
+            echo "🏁 Pipeline abgeschlossen."
         }
     }
 }
