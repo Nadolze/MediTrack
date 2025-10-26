@@ -1,22 +1,37 @@
 pipeline {
     agent any
 
-    // Automatische Verwendung der in Jenkins konfigurierten Maven-Installation
     tools {
         maven 'Maven 3.9.11'
     }
 
+    triggers {
+        githubPush()
+    }
+
     stages {
+
         stage('Build') {
             steps {
                 script {
-                    // Prüfen, ob Jenkins auf Windows oder Linux läuft
+                    echo "🔧 Starte Build-Prozess..."
                     if (isUnix()) {
-                        // Linux: Verwende 'sh'
-                        sh 'mvn clean package'
+                        sh 'mvn clean package -DskipTests'
                     } else {
-                        // Windows: Verwende 'bat'
-                        bat 'mvn clean package'
+                        bat 'mvn clean package -DskipTests'
+                    }
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    echo "🧪 Führe automatisierte Tests aus..."
+                    if (isUnix()) {
+                        sh 'mvn test'
+                    } else {
+                        bat 'mvn test'
                     }
                 }
             }
@@ -25,29 +40,29 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Branchname aus Jenkins-Umgebung
+                    // wolfdeleu
                     def branch = env.BRANCH_NAME
-
-                    // Fester Port für lokale Instanz (wolfdeleu)
                     def port = '9090'
-                    echo "Deploying branch ${branch} on fixed port ${port}"
 
-                    // Zielpfad dynamisch bestimmen – plattformabhängig
-                    def targetDir
-                    if (isUnix()) {
-                        targetDir = "/opt/meditrack/${branch}"
-                    } else {
-                        targetDir = "C:\\meditrack\\${branch}"
+                    // 🔄 Fallback auf 8080, falls 9090 bereits belegt
+                    try {
+                        def socket = new Socket("localhost", port.toInteger())
+                        echo "⚠️ Port ${port} ist belegt – weiche auf 8080 aus."
+                        port = '8080'
+                        socket.close()
+                    } catch (Exception e) {
+                        echo "✅ Port ${port} ist frei."
                     }
 
-                    // Deployment-Befehle je nach OS
+                    echo "🚀 Deploying branch ${branch} on port ${port}"
+
+                    def targetDir = isUnix() ? "/opt/meditrack/${branch}" : "C:\\meditrack\\${branch}"
+
                     if (isUnix()) {
-                        // Linux: Deployment mit systemd
                         sh """
                             sudo mkdir -p ${targetDir}
                             sudo cp target/mediweb-0.0.1-SNAPSHOT.jar ${targetDir}/
                             sudo systemctl stop meditrack-${branch} || true
-
                             sudo bash -c 'cat > /etc/systemd/system/meditrack-${branch}.service <<EOF
 [Unit]
 Description=MediTrack (${branch})
@@ -65,15 +80,41 @@ EOF'
                             sudo systemctl start meditrack-${branch}
                         """
                     } else {
-                        // Windows: Deployment mit PowerShell / CMD
                         bat """
                             if not exist ${targetDir} mkdir ${targetDir}
                             copy target\\mediweb-0.0.1-SNAPSHOT.jar ${targetDir}\\ /Y
-                            echo Stopping existing MediTrack process (if running)...
+                            echo Stoppe vorherige MediTrack-Instanz (falls aktiv)...
                             powershell -Command "Stop-Process -Name java -ErrorAction SilentlyContinue"
-                            echo Starting MediTrack on port ${port}...
+                            echo Starte MediTrack auf Port ${port}...
                             start /B java -jar ${targetDir}\\mediweb-0.0.1-SNAPSHOT.jar --server.port=${port}
                         """
+                    }
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    echo "🔍 Überprüfe, ob die Anwendung unter http://localhost:9090 oder :8080 läuft..."
+                    def ports = ['9090', '8080']
+                    def success = false
+
+                    for (p in ports) {
+                        try {
+                            def response = new URL("http://localhost:${p}").text
+                            if (response.contains("Willkommen") || response.contains("Login")) {
+                                echo "✅ Server antwortet erfolgreich auf Port ${p}!"
+                                success = true
+                                break
+                            }
+                        } catch (Exception e) {
+                            echo "⚠️ Keine Antwort auf Port ${p}."
+                        }
+                    }
+
+                    if (!success) {
+                        error "❌ Health Check fehlgeschlagen – App auf keinem Port erreichbar."
                     }
                 }
             }
@@ -82,7 +123,7 @@ EOF'
 
     post {
         success {
-            echo "✅ Build und Deployment erfolgreich abgeschlossen (Port 9090)."
+            echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
         }
         failure {
             echo "❌ Build oder Deployment fehlgeschlagen."
