@@ -60,17 +60,14 @@ pipeline {
                     def deployDir = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}" : "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
                     def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-                    // 🔍 Portprüfung (Windows + Linux)
+                    // 🔍 Prüfe, ob Port belegt ist
                     def portFree = false
                     if (isUnix()) {
                         def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
                         portFree = result == ""
                     } else {
-                        def result = bat(
-                            script: "powershell -Command \"if ((netstat -ano | Select-String ':${port}') -eq \$null) { Write-Host 'FREE' } else { Write-Host 'USED' }\"",
-                            returnStdout: true
-                        ).trim()
-                        portFree = result.contains("FREE")
+                        def result = bat(script: "netstat -ano | findstr :${port} || exit /B 0", returnStdout: true).trim()
+                        portFree = result == ""
                     }
 
                     if (!portFree) {
@@ -80,7 +77,7 @@ pipeline {
                         echo "✅ Port ${port} ist frei."
                     }
 
-                    // 📁 Deployment
+                    // 📁 Deployment-Verzeichnis
                     if (isUnix()) {
                         sh "mkdir -p ${deployDir}"
                         sh "cp target/${appJar} ${deployDir}/"
@@ -89,15 +86,21 @@ pipeline {
                     } else {
                         bat "if not exist ${deployDir} mkdir ${deployDir}"
                         bat "copy target\\${appJar} ${deployDir}\\ /Y"
+
+                        // 🧹 Alte Instanz stoppen
                         bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
 
-                        // 💥 Neuer, wirklich asynchroner Start (funktioniert auch bei Jenkins-Dienst!)
+                        // 🧩 Neues Startskript erzeugen und im Hintergrund starten
                         bat """
-powershell -Command "Start-Process java -ArgumentList '-jar','${deployDir}\\${appJar}','--server.port=${port}' -NoNewWindow -PassThru | Out-Null"
+echo @echo off > ${deployDir}\\start_meditrack.bat
+echo cd /d ${deployDir} >> ${deployDir}\\start_meditrack.bat
+echo java -jar ${appJar} --server.port=${port} >> ${deployDir}\\start_meditrack.bat
+start "" /min cmd /c ${deployDir}\\start_meditrack.bat
 """
+
+                        echo "🚀 MediTrack wurde in eigenem Prozess gestartet (Port ${port})"
                     }
 
-                    echo "🚀 ${APP_NAME} gestartet auf Port ${port}"
                     env.ACTIVE_PORT = port
                 }
             }
@@ -110,37 +113,28 @@ powershell -Command "Start-Process java -ArgumentList '-jar','${deployDir}\\${ap
                     echo "🔍 Überprüfe Erreichbarkeit und Inhalt auf http://localhost:${port}"
 
                     def healthy = false
-                    for (int i = 1; i <= 3; i++) {
+                    for (int i = 1; i <= 5; i++) {
                         echo "⏳ Versuch ${i}..."
                         sleep time: 5, unit: 'SECONDS'
 
                         try {
                             def response = ""
                             def content = ""
-
                             if (isUnix()) {
                                 response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
-                                content = sh(script: "curl -s http://localhost:${port} | head -n 2", returnStdout: true).trim()
+                                content = sh(script: "curl -s http://localhost:${port} | grep MediTrack || true", returnStdout: true).trim()
                             } else {
-                                response = bat(
-                                    script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"",
-                                    returnStdout: true
-                                ).trim()
-                                content = bat(
-                                    script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String -Pattern 'MediTrack' | Select -First 1\"",
-                                    returnStdout: true
-                                ).trim()
+                                response = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
+                                content = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String -Pattern 'MediTrack' | Select -First 1\"", returnStdout: true).trim()
                             }
 
                             response = response.tokenize('\n').last().trim()
                             echo "ℹ️ HTTP Status: ${response}"
+                            echo "🔎 Gefundener Inhalt: ${content}"
 
-                            if (response.contains("200") || response.contains("302")) {
-                                echo "🔎 Gefundener Inhalt: ${content}"
+                            if ((response.contains("200") || response.contains("302")) && content.contains("MediTrack")) {
                                 healthy = true
                                 break
-                            } else {
-                                echo "⚠️ Antwort war: ${response}"
                             }
                         } catch (err) {
                             echo "⚠️ Keine Antwort erhalten, versuche erneut..."
@@ -148,7 +142,7 @@ powershell -Command "Start-Process java -ArgumentList '-jar','${deployDir}\\${ap
                     }
 
                     if (!healthy) {
-                        error "❌ Health Check fehlgeschlagen – keine Antwort auf Port ${port}"
+                        error "❌ Health Check fehlgeschlagen – keine gültige MediTrack-Antwort auf Port ${port}"
                     } else {
                         echo "✅ Anwendung läuft stabil auf Port ${port} und liefert MediTrack-Startseite."
                         echo "🔗 Öffne: http://localhost:${port}"
