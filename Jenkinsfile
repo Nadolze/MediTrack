@@ -5,12 +5,7 @@ pipeline {
         maven 'Maven 3.9.11'
     }
 
-    triggers {
-        githubPush()
-    }
-
     stages {
-
         stage('Build') {
             steps {
                 script {
@@ -40,44 +35,28 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // wolfdeleu
-                    def branch = env.BRANCH_NAME
-                    def port = '9090'
+                    // Branchname aus Jenkins-Umgebung
+                    def branch = env.BRANCH_NAME ?: "main"
 
-                    // 🔄 Fallback auf 8080, falls 9090 bereits belegt
+                    // Priorität: Port 9090, wenn belegt -> auf 8080 ausweichen
+                    def port = 9090
                     try {
-                        def socket = new Socket("localhost", port.toInteger())
-                        echo "⚠️ Port ${port} ist belegt – weiche auf 8080 aus."
-                        port = '8080'
-                        socket.close()
+                        new Socket("localhost", 9090).close()
+                        port = 8080
+                        echo "⚠️ Port 9090 ist belegt, wechsle auf Port 8080."
                     } catch (Exception e) {
-                        echo "✅ Port ${port} ist frei."
+                        echo "✅ Port 9090 ist frei."
                     }
 
                     echo "🚀 Deploying branch ${branch} on port ${port}"
 
+                    // Zielverzeichnis für JARs
                     def targetDir = isUnix() ? "/opt/meditrack/${branch}" : "C:\\meditrack\\${branch}"
-
                     if (isUnix()) {
                         sh """
-                            sudo mkdir -p ${targetDir}
-                            sudo cp target/mediweb-0.0.1-SNAPSHOT.jar ${targetDir}/
+                            mkdir -p ${targetDir}
+                            cp target/mediweb-0.0.1-SNAPSHOT.jar ${targetDir}/
                             sudo systemctl stop meditrack-${branch} || true
-                            sudo bash -c 'cat > /etc/systemd/system/meditrack-${branch}.service <<EOF
-[Unit]
-Description=MediTrack (${branch})
-After=network.target
-
-[Service]
-User=jenkins
-ExecStart=/usr/bin/java -jar ${targetDir}/mediweb-0.0.1-SNAPSHOT.jar --server.port=${port}
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF'
-                            sudo systemctl daemon-reload
-                            sudo systemctl start meditrack-${branch}
                         """
                     } else {
                         bat """
@@ -97,24 +76,31 @@ EOF'
             steps {
                 script {
                     echo "🔍 Überprüfe, ob die Anwendung unter http://localhost:9090 oder :8080 läuft..."
-                    def ports = ['9090', '8080']
-                    def success = false
+                    def healthy = false
 
-                    for (p in ports) {
+                    // mehrfach prüfen mit Pause
+                    for (int i = 0; i < 5; i++) {
                         try {
-                            def response = new URL("http://localhost:${p}").text
-                            if (response.contains("Willkommen") || response.contains("Login")) {
-                                echo "✅ Server antwortet erfolgreich auf Port ${p}!"
-                                success = true
+                            def response = new URL("http://localhost:9090").getText()
+                            if (response.contains("MediTrack")) {
+                                healthy = true
                                 break
                             }
-                        } catch (Exception e) {
-                            echo "⚠️ Keine Antwort auf Port ${p}."
-                        }
+                        } catch (Exception e) { sleep(5) }
+
+                        try {
+                            def response = new URL("http://localhost:8080").getText()
+                            if (response.contains("MediTrack")) {
+                                healthy = true
+                                break
+                            }
+                        } catch (Exception e) { sleep(5) }
                     }
 
-                    if (!success) {
-                        error "❌ Health Check fehlgeschlagen – App auf keinem Port erreichbar."
+                    if (!healthy) {
+                        error("❌ Health Check fehlgeschlagen – App auf keinem Port erreichbar.")
+                    } else {
+                        echo "✅ Anwendung erfolgreich erreichbar!"
                     }
                 }
             }
@@ -123,7 +109,7 @@ EOF'
 
     post {
         success {
-            echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
+            echo "🎉 Build und Deployment erfolgreich abgeschlossen!"
         }
         failure {
             echo "❌ Build oder Deployment fehlgeschlagen."
