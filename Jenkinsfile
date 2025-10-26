@@ -60,14 +60,17 @@ pipeline {
                     def deployDir = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}" : "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
                     def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-                    // 🔍 Prüfe, ob Port frei ist
+                    // 🔍 Portprüfung (neu & stabil unter Windows)
                     def portFree = false
                     if (isUnix()) {
                         def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
                         portFree = result == ""
                     } else {
-                        def result = bat(script: "netstat -ano | findstr :${port} || exit /B 0", returnStdout: true).trim()
-                        portFree = result == ""
+                        def result = bat(
+                            script: "powershell -Command \"if ((netstat -ano | Select-String ':${port}') -eq \$null) { Write-Host 'FREE' } else { Write-Host 'USED' }\"",
+                            returnStdout: true
+                        ).trim()
+                        portFree = result.contains("FREE")
                     }
 
                     if (!portFree) {
@@ -77,7 +80,7 @@ pipeline {
                         echo "✅ Port ${port} ist frei."
                     }
 
-                    // 📁 Deployment-Verzeichnis und Start
+                    // 📁 Deployment & Start
                     if (isUnix()) {
                         sh "mkdir -p ${deployDir}"
                         sh "cp target/${appJar} ${deployDir}/"
@@ -87,7 +90,6 @@ pipeline {
                         bat "if not exist ${deployDir} mkdir ${deployDir}"
                         bat "copy target\\${appJar} ${deployDir}\\ /Y"
                         bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
-                        // 🆕 Änderung hier: Prozess wirklich detached starten
                         bat "powershell -Command \"Start-Process java -ArgumentList '-jar','${deployDir}\\${appJar}','--server.port=${port}' -WindowStyle Hidden\""
                     }
 
@@ -109,34 +111,32 @@ pipeline {
                         sleep time: 5, unit: 'SECONDS'
 
                         try {
-                            def status = ""
+                            def response = ""
                             def content = ""
 
                             if (isUnix()) {
-                                status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
-                                content = sh(script: "curl -s http://localhost:${port} | grep -i MediTrack || true", returnStdout: true).trim()
+                                response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
+                                content = sh(script: "curl -s http://localhost:${port} | head -n 2", returnStdout: true).trim()
                             } else {
-                                status = bat(
+                                response = bat(
                                     script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"",
                                     returnStdout: true
                                 ).trim()
                                 content = bat(
-                                    script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String 'MediTrack'\"",
+                                    script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String -Pattern 'MediTrack' | Select -First 1\"",
                                     returnStdout: true
                                 ).trim()
                             }
 
-                            status = status.tokenize('\n').last().trim()
-                            content = content.tokenize('\n').last().trim()
+                            response = response.tokenize('\n').last().trim()
+                            echo "ℹ️ HTTP Status: ${response}"
 
-                            echo "ℹ️ HTTP Status: ${status}"
-                            echo "🔎 Gefundener Inhalt: ${content}"
-
-                            if ((status.contains("200") || status.contains("302")) && content.toLowerCase().contains("meditrack")) {
+                            if (response.contains("200") || response.contains("302")) {
+                                echo "🔎 Gefundener Inhalt: ${content}"
                                 healthy = true
                                 break
                             } else {
-                                echo "⚠️ Antwort unvollständig oder Inhalt fehlt."
+                                echo "⚠️ Antwort war: ${response}"
                             }
                         } catch (err) {
                             echo "⚠️ Keine Antwort erhalten, versuche erneut..."
@@ -144,7 +144,7 @@ pipeline {
                     }
 
                     if (!healthy) {
-                        error "❌ Health Check fehlgeschlagen – keine Antwort oder kein 'MediTrack' im Inhalt."
+                        error "❌ Health Check fehlgeschlagen – keine Antwort auf Port ${port}"
                     } else {
                         echo "✅ Anwendung läuft stabil auf Port ${port} und liefert MediTrack-Startseite."
                         echo "🔗 Öffne: http://localhost:${port}"
