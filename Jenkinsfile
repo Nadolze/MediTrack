@@ -2,29 +2,29 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "MediTrack"
-        JAR_NAME = "mediweb-0.0.1-SNAPSHOT.jar"
-        DEFAULT_PORT = "9090"
+        DEFAULT_PORT = '9090'
+        BACKUP_PORT = '8080'
     }
 
     stages {
-        stage('Tool Install') {
-            steps {
-                echo "🧰 Stelle sicher, dass Java & Maven verfügbar sind..."
-                // Jenkins stellt Tool-Umgebung bereit, falls konfiguriert
-                tool name: 'Maven', type: 'maven'
-                tool name: 'JDK', type: 'jdk'
-            }
-        }
-
         stage('Build') {
             steps {
                 script {
                     echo "🔧 Starte Build-Prozess..."
-                    if (isUnix()) {
-                        sh "mvn clean package -DskipTests"
-                    } else {
-                        bat "mvn clean package -DskipTests"
+
+                    // Automatische OS-Erkennung
+                    def mvnCmd = isUnix() ? 'mvn' : 'mvn.cmd'
+
+                    // Maven Build
+                    try {
+                        if (isUnix()) {
+                            sh "${mvnCmd} clean package -DskipTests"
+                        } else {
+                            bat "${mvnCmd} clean package -DskipTests"
+                        }
+                        echo "✅ Build erfolgreich abgeschlossen."
+                    } catch (err) {
+                        error "❌ Maven-Build fehlgeschlagen. Bitte prüfe Maven-Installation oder Pfad!"
                     }
                 }
             }
@@ -34,10 +34,16 @@ pipeline {
             steps {
                 script {
                     echo "🧪 Führe automatisierte Tests aus..."
-                    if (isUnix()) {
-                        sh "mvn test"
-                    } else {
-                        bat "mvn test"
+                    def mvnCmd = isUnix() ? 'mvn' : 'mvn.cmd'
+                    try {
+                        if (isUnix()) {
+                            sh "${mvnCmd} test"
+                        } else {
+                            bat "${mvnCmd} test"
+                        }
+                        echo "✅ Tests erfolgreich bestanden."
+                    } catch (err) {
+                        error "❌ Tests fehlgeschlagen."
                     }
                 }
             }
@@ -46,42 +52,41 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Branchname und Port bestimmen
-                    def branch = env.GIT_BRANCH ?: 'main'
+                    echo "🚀 Starte Deployment..."
+
+                    // Port-Erkennung mit Fallback
                     def port = env.DEFAULT_PORT
+                    def isPortFree = true
 
-                    echo "✅ Port ${port} wird verwendet."
-                    echo "🚀 Deploying branch ${branch} auf Port ${port}"
+                    try {
+                        new java.net.Socket("localhost", port.toInteger()).close()
+                        isPortFree = false
+                    } catch (Exception ignore) {}
 
-                    // Zielpfad abhängig vom Betriebssystem
-                    def targetDir = isUnix() ? "/opt/meditrack/${branch}" : "C:\\meditrack\\${branch}"
-
-                    // Zielordner anlegen
-                    if (isUnix()) {
-                        sh "mkdir -p ${targetDir}"
-                        sh "cp target/${JAR_NAME} ${targetDir}/"
-                    } else {
-                        bat "if not exist ${targetDir} mkdir ${targetDir}"
-                        bat "copy target\\${JAR_NAME} ${targetDir}\\ /Y"
+                    if (!isPortFree) {
+                        echo "⚠️ Port ${port} ist belegt – weiche auf ${BACKUP_PORT} aus."
+                        port = BACKUP_PORT
                     }
 
-                    // Vorherige Instanz stoppen
-                    echo "🛑 Stoppe alte MediTrack-Instanz (falls aktiv)..."
+                    echo "➡️ Deployment auf Port ${port}"
+
                     if (isUnix()) {
-                        sh "pkill -f ${JAR_NAME} || true"
+                        sh """
+                            mkdir -p ~/meditrack
+                            cp target/mediweb-0.0.1-SNAPSHOT.jar ~/meditrack/
+                            pkill -f mediweb || true
+                            nohup java -jar ~/meditrack/mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > ~/meditrack/log.txt 2>&1 &
+                        """
                     } else {
-                        bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
+                        bat """
+                            if not exist C:\\meditrack mkdir C:\\meditrack
+                            copy target\\mediweb-0.0.1-SNAPSHOT.jar C:\\meditrack\\ /Y
+                            powershell -Command "Stop-Process -Name java -ErrorAction SilentlyContinue"
+                            start /B java -jar C:\\meditrack\\mediweb-0.0.1-SNAPSHOT.jar --server.port=${port}
+                        """
                     }
 
-                    // Anwendung starten
-                    echo "🟢 Starte ${APP_NAME} auf Port ${port}..."
-                    if (isUnix()) {
-                        sh "nohup java -jar ${targetDir}/${JAR_NAME} --server.port=${port} > ${targetDir}/mediweb.log 2>&1 &"
-                        sh "sleep 10"
-                    } else {
-                        bat "start /B java -jar ${targetDir}\\${JAR_NAME} --server.port=${port}"
-                        bat "timeout /T 10 >nul"
-                    }
+                    echo "✅ MediTrack erfolgreich gestartet."
                 }
             }
         }
@@ -89,17 +94,25 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    echo "🔍 Überprüfe, ob die Anwendung unter http://localhost:9090 oder :8080 läuft..."
-                    try {
-                        def response = new URL("http://localhost:9090").getText()
-                        echo "✅ Server antwortet erfolgreich auf Port 9090!"
-                    } catch (Exception e) {
+                    echo "🔍 Überprüfe Erreichbarkeit unter http://localhost:${DEFAULT_PORT} oder ${BACKUP_PORT} ..."
+                    def urls = ["http://localhost:${DEFAULT_PORT}", "http://localhost:${BACKUP_PORT}"]
+                    def reachable = false
+
+                    urls.each { u ->
                         try {
-                            def response = new URL("http://localhost:8080").getText()
-                            echo "✅ Server antwortet erfolgreich auf Port 8080!"
-                        } catch (Exception ex) {
-                            error("❌ Health Check fehlgeschlagen – App auf keinem Port erreichbar.")
+                            def conn = new URL(u).openConnection()
+                            conn.connectTimeout = 5000
+                            conn.readTimeout = 5000
+                            conn.inputStream.text
+                            echo "✅ Server antwortet erfolgreich auf ${u}"
+                            reachable = true
+                        } catch (Exception e) {
+                            echo "⚠️ Keine Antwort auf ${u}"
                         }
+                    }
+
+                    if (!reachable) {
+                        error "❌ Health Check fehlgeschlagen – keine Instanz erreichbar."
                     }
                 }
             }
