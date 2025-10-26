@@ -70,7 +70,7 @@ MediTrack/
 ---
 
 ## Eventstorming
-<img src="https://github.com/Nadolze/MediTrack/tree/main/Eventstorming.png">
+<img alt="Bild mit Post-Its zum Eventstorming" src="./Eventstorming.png">
 
 ## 🧩 Domänenmodell (Entwurf)
 
