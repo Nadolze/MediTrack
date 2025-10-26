@@ -77,7 +77,7 @@ pipeline {
                         echo "✅ Port ${port} ist frei."
                     }
 
-                    // 📁 Deployment-Verzeichnis
+                    // 📁 Deployment-Verzeichnis und Start
                     if (isUnix()) {
                         sh "mkdir -p ${deployDir}"
                         sh "cp target/${appJar} ${deployDir}/"
@@ -87,7 +87,8 @@ pipeline {
                         bat "if not exist ${deployDir} mkdir ${deployDir}"
                         bat "copy target\\${appJar} ${deployDir}\\ /Y"
                         bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
-                        bat "start /B java -jar ${deployDir}\\${appJar} --server.port=${port}"
+                        // 🆕 Änderung hier: Prozess wirklich detached starten
+                        bat "powershell -Command \"Start-Process java -ArgumentList '-jar','${deployDir}\\${appJar}','--server.port=${port}' -WindowStyle Hidden\""
                     }
 
                     echo "🚀 ${APP_NAME} gestartet auf Port ${port}"
@@ -100,35 +101,42 @@ pipeline {
             steps {
                 script {
                     def port = env.ACTIVE_PORT ?: "9090"
-                    echo "🔍 Überprüfe Erreichbarkeit auf http://localhost:${port}"
+                    echo "🔍 Überprüfe Erreichbarkeit und Inhalt auf http://localhost:${port}"
 
-                    // Wiederholungsversuch (max. 3x)
                     def healthy = false
                     for (int i = 1; i <= 3; i++) {
                         echo "⏳ Versuch ${i}..."
                         sleep time: 5, unit: 'SECONDS'
 
                         try {
-                            def response = ""
+                            def status = ""
+                            def content = ""
+
                             if (isUnix()) {
-                                response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
+                                status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
+                                content = sh(script: "curl -s http://localhost:${port} | grep -i MediTrack || true", returnStdout: true).trim()
                             } else {
-                                response = bat(
+                                status = bat(
                                     script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"",
+                                    returnStdout: true
+                                ).trim()
+                                content = bat(
+                                    script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String 'MediTrack'\"",
                                     returnStdout: true
                                 ).trim()
                             }
 
-                            // Nur die letzte Zeile extrahieren (enthält Statuscode)
-                            response = response.tokenize('\n').last().trim()
+                            status = status.tokenize('\n').last().trim()
+                            content = content.tokenize('\n').last().trim()
 
-                            echo "ℹ️ HTTP Status: ${response}"
+                            echo "ℹ️ HTTP Status: ${status}"
+                            echo "🔎 Gefundener Inhalt: ${content}"
 
-                            if (response.contains("200") || response.contains("302")) {
+                            if ((status.contains("200") || status.contains("302")) && content.toLowerCase().contains("meditrack")) {
                                 healthy = true
                                 break
                             } else {
-                                echo "⚠️ Antwort war: ${response}"
+                                echo "⚠️ Antwort unvollständig oder Inhalt fehlt."
                             }
                         } catch (err) {
                             echo "⚠️ Keine Antwort erhalten, versuche erneut..."
@@ -136,9 +144,10 @@ pipeline {
                     }
 
                     if (!healthy) {
-                        error "❌ Health Check fehlgeschlagen – keine Antwort auf Port ${port}"
+                        error "❌ Health Check fehlgeschlagen – keine Antwort oder kein 'MediTrack' im Inhalt."
                     } else {
-                        echo "✅ Anwendung läuft stabil auf Port ${port}"
+                        echo "✅ Anwendung läuft stabil auf Port ${port} und liefert MediTrack-Startseite."
+                        echo "🔗 Öffne: http://localhost:${port}"
                     }
                 }
             }
