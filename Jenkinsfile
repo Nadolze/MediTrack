@@ -1,5 +1,6 @@
 pipeline {
 	agent any
+
 	environment {
 		APP_NAME = "MediTrack"
 		MAVEN_HOME = tool 'Maven 3.9.11'
@@ -55,76 +56,58 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
+					// Feste Ports
 					def jenkinsPort = "9091"
-					def myPort = "9090"
+					def meditrackPort = "9090"
 					def fallbackPort = "8080"
-					def port = fallbackPort
+					def deployDir = isUnix() ? "/opt/meditrack/main" : "C:\\meditrack\\main"
+					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-					// Nur für deinen Benutzer auf 9090
-					if (env.BUILD_USER_ID == "wolfdeleu") {
-						port = myPort
-					}
+					// Prüfen, ob Jenkins selbst läuft
+					echo "ℹ️ Jenkins läuft auf Port ${jenkinsPort}"
 
-					echo "ℹ️ Jenkins läuft auf ${jenkinsPort}, ${env.BUILD_USER_ID ?: 'unbekannter User'} verwendet ${port}"
-
-					// Prüfen, ob Port frei
+					// Portprüfung für MediTrack
 					def portFree = false
 					if (isUnix()) {
-						def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
+						def result = sh(script: "netstat -tuln | grep ${meditrackPort} || true", returnStdout: true).trim()
 						portFree = result == ""
 					} else {
-						def result = bat(script: "netstat -ano | findstr :${port} || exit /B 0", returnStdout: true).trim()
+						def result = bat(script: "netstat -ano | findstr :${meditrackPort} || exit /B 0", returnStdout: true).trim()
 						portFree = result == ""
 					}
 
 					if (!portFree) {
-						echo "⚠️ Port ${port} ist belegt."
-						if (port == myPort) {
-							echo "👉 Wechsle auf Fallback-Port ${fallbackPort}."
-							port = fallbackPort
-						} else {
-							echo "⛔ Kein alternativer Port verfügbar, Abbruch."
-							error "Kein freier Port gefunden!"
-						}
+						echo "⚠️ Port ${meditrackPort} ist belegt – wechsle auf ${fallbackPort}"
+						meditrackPort = fallbackPort
 					} else {
-						echo "✅ Port ${port} ist frei."
+						echo "✅ Port ${meditrackPort} ist frei."
 					}
 
-					// Deployment-Verzeichnis
-					def deployDir = isUnix()
-					? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}"
-					: "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
-					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
-
-					// Alte MediTrack-Instanz stoppen
-					if (isUnix()) {
-						sh "fuser -k ${port}/tcp || true"
-					} else {
-						bat """
-powershell -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
-"""
-					}
-
-					// Neue MediTrack-Instanz starten
+					// Deployment-Verzeichnis erstellen
 					if (isUnix()) {
 						sh "mkdir -p ${deployDir}"
 						sh "cp target/${appJar} ${deployDir}/"
-						sh "nohup java -jar ${deployDir}/${appJar} --server.port=${port} > ${deployDir}/app.log 2>&1 &"
+						// MediTrack stoppen (nicht Jenkins)
+						sh "fuser -k ${meditrackPort}/tcp || true"
+						sh "nohup java -jar ${deployDir}/${appJar} --server.port=${meditrackPort} > ${deployDir}/app.log 2>&1 &"
 					} else {
 						bat "if not exist ${deployDir} mkdir ${deployDir}"
 						bat "copy target\\${appJar} ${deployDir}\\ /Y"
 
+						// MediTrack stoppen, aber Jenkins laufen lassen
+						bat "powershell -Command \"Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }\""
+
+						// Neues Startskript erzeugen
 						bat """
 echo @echo off > ${deployDir}\\start_meditrack.bat
 echo cd /d ${deployDir} >> ${deployDir}\\start_meditrack.bat
-echo java -jar ${appJar} --server.port=${port} >> ${deployDir}\\start_meditrack.bat
+echo java -jar ${appJar} --server.port=${meditrackPort} >> ${deployDir}\\start_meditrack.bat
 start "" /min cmd /c ${deployDir}\\start_meditrack.bat
 """
-
-						echo "🚀 MediTrack wurde in eigenem Prozess gestartet (Port ${port})"
+						echo "🚀 MediTrack wurde in eigenem Prozess gestartet (Port ${meditrackPort})"
 					}
 
-					env.ACTIVE_PORT = port
+					env.ACTIVE_PORT = meditrackPort
 				}
 			}
 		}
