@@ -55,7 +55,7 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					// ⚙️ Port-Logik: wolfdeleu → 9090, Jenkins → 9091, andere → 8080
+					// ⚙️ Port-Logik
 					def jenkinsPort = "9091"
 					def defaultPort = "9090"
 					def fallbackPort = "8080"
@@ -63,12 +63,16 @@ pipeline {
 					def user = env.BUILD_USER_ID ?: ""
 					def port = (user == "wolfdeleu") ? defaultPort : fallbackPort
 
-					if (port == jenkinsPort) {
-						echo "⚠️ Port ${jenkinsPort} gehört Jenkins – wechsle auf ${fallbackPort}"
-						port = fallbackPort
+					// Wenn Jenkins selbst der ausführende Host ist → 9091 blocken
+					if (env.JENKINS_URL) {
+						echo "ℹ️ Jenkins-Build erkannt – Hauptinstanz läuft auf ${jenkinsPort}"
+						if (port == jenkinsPort) {
+							echo "⚠️ Port ${jenkinsPort} gehört Jenkins – wechsle auf ${fallbackPort}"
+							port = fallbackPort
+						}
 					}
 
-					// 🔍 Port prüfen
+					// 🔍 Portprüfung
 					def portFree = false
 					if (isUnix()) {
 						def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
@@ -85,12 +89,13 @@ pipeline {
 						echo "✅ Port ${port} ist frei."
 					}
 
+					// 📁 Deployment-Ziel
 					def deployDir = isUnix()
 					? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}"
 					: "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
 					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-					// 📁 Deployment
+					// 🧹 Alte Instanz beenden und neue starten
 					if (isUnix()) {
 						sh "mkdir -p ${deployDir}"
 						sh "cp target/${appJar} ${deployDir}/"
@@ -99,7 +104,6 @@ pipeline {
 					} else {
 						bat "if not exist ${deployDir} mkdir ${deployDir}"
 						bat "copy target\\${appJar} ${deployDir}\\ /Y"
-
 						bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
 
 						bat """
