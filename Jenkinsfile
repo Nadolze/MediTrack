@@ -147,7 +147,6 @@ pipeline {
 		}
 		failure {
 			echo "❌ Build oder Deployment fehlgeschlagen."
-
 		}
 		always {
 			echo "🏁 Pipeline abgeschlossen."
