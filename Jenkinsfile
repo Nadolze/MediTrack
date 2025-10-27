@@ -49,7 +49,7 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					// Benutzer erkennen
+					// Benutzername abfragen
 					def currentUser = ""
 					if (isUnix()) {
 						currentUser = sh(script: "whoami", returnStdout: true).trim()
@@ -61,29 +61,31 @@ pipeline {
 					def port = (currentUser.toLowerCase().contains("micro") || currentUser.toLowerCase().contains("wolfdeleu")) ? "9090" : "8080"
 					echo "👤 Benutzer '${currentUser}' erkannt – MediTrack läuft auf Port ${port}"
 
-					// Betriebssystemabhängige Deployment-Strategie
 					if (isUnix()) {
+						// Linux / macOS Variante
 						sh """
                         mkdir -p /opt/meditrack/main
                         cp target/mediweb-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
                         pkill -f mediweb-0.0.1-SNAPSHOT.jar || true
                         nohup java -jar /opt/meditrack/main/mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
-                        echo "🚀 MediTrack wurde auf Port ${port} gestartet."
+                        echo "🚀 MediTrack wurde auf Port ${port} gestartet (Linux detached)."
                         """
 					} else {
+						// ⭐ Windows mit WMI-Detach (läuft unabhängig von Jenkins)
 						def deployDir = "C:\\\\meditrack\\\\main"
 						bat """
                         if not exist "${deployDir}" mkdir "${deployDir}"
                         copy target\\mediweb-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
 
+                        :: Alte Instanzen stoppen
                         powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
 
                         cd /d "${deployDir}"
 
-                        :: ⭐ Starte entkoppelt vom Jenkins-Service
-                        powershell -NoProfile -Command "Start-Process 'java' -ArgumentList '-jar mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > app.log 2>&1' -WindowStyle Hidden -WorkingDirectory '${deployDir}'"
+                        :: 🔥 Starte MediTrack vollständig losgelöst vom Jenkins-Service
+                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=${port}', 0, \$false) }"
 
-                        echo "🚀 MediTrack wurde als separater Prozess gestartet (Port ${port})"
+                        echo "🚀 MediTrack wurde via WMI-Detach gestartet (Port ${port})"
                         """
 					}
 
