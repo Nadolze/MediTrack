@@ -143,10 +143,11 @@ pipeline {
 	post {
 		success {
 			echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
+			echo "WIN Powershell start mit: \"java -jar C:\meditrack\main\meditrack-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
 		}
 		failure {
 			echo "❌ Build oder Deployment fehlgeschlagen."
-			echo "WIN Powershell start mit: \"java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
+
 		}
 		always {
 			echo "🏁 Pipeline abgeschlossen."
