@@ -70,7 +70,10 @@ MediTrack/
 ---
 
 ## Eventstorming
-<img alt="Bild mit Post-Its zum Eventstorming" src="./Eventstorming.png">
+
+- Eine Möglichkeit, um zwischen Entwicklern und Domain Experten zu einem gemeinsamen Verständnis von User-Stories zu kommen.
+- Domain Event (Orange), HotSpot (rot), Actor (gelb)
+<img alt="Bild mit Post-Its zum Eventstorming" src="./Eventstorming_Neu_2.jpg">
 
 ## 🧩 Domänenmodell (Entwurf)
 
@@ -202,11 +205,15 @@ Ich sehe die Contexts in folgenden Bereichen:
 4) Erfassung Werte
 5) Alarmsystem / Notification-Center
 
+## 🧩 Bounded Context
+- Ein definierter Teil einer Software, welcher eigene Regeln, Grundsätze, Strategien oder Richtlinien besitzt, sowie eine eigene Sprache (Ubiquitous Language) aufweist.
+- Domains oder Subdomains können mehrere Bounded Contexts enthalten. Allerdings sollte sich ein Bounded Context nicht über mehrere Domains hinweg erstrecken. 
+
 | Bounded Context| Verantwortlichkeiten| Beziehung zu anderen BCs|
 |---------------|--------|----------------|
 | Registrierungsvorgang  | Patient/Arzt kann sich registrieren und anmelden. | Vorraussetzung für alle anderen BCs  |
 | Stammdatenerfassung | Patient kann seine Daten (Name, Geburtsdatum, Krankheitsgeschichte) angeben und verwalten. | Die angegebene Krankheitsgeschichte wird vom BC "Krankheitshistorie" verwendet und ggf. erweitert |
-| Krankheitshistorie| Patient/Arzt können auf Krankheitshistorien zugreifen und diese erweitern.| - |
+| Krankheitshistorie| Patient/Arzt können auf Krankheitshistorien zugreifen und diese erweitern.| Die ursprüngliche Krankheitsgeschichte wird im BC "Stammdatenerfassung" erstellt. |
 | Erfassung Werte| Die Vitalwerte vom Patienten können erfasst und gespeichert werden.| Wenn der erfasste Wert seinen Schwellenwert übersteigt, wird das Alarmsystem aktiviert. |
-| Alarmsystem / Notification-Center| Es werden kritische Vitalwerte erkannt und der Arzt wird benachrichtigt.| - |
+| Alarmsystem / Notification-Center| Es werden kritische Vitalwerte erkannt und der Arzt wird benachrichtigt.| Das Alarmsystem enthält und überprüft die Daten vom BC "Erfassung Werte". |
 
