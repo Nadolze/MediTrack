@@ -50,9 +50,9 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					def currentUser = isUnix() ?
-					sh(script: "whoami", returnStdout: true).trim() :
-					bat(script: "echo %USERNAME%", returnStdout: true).trim()
+					def currentUser = isUnix()
+					? sh(script: "whoami", returnStdout: true).trim()
+					: bat(script: "echo %USERNAME%", returnStdout: true).trim()
 
 					def meditrackPort = "8080"
 					if (currentUser.toLowerCase().contains("wolfdeleu") || currentUser.toLowerCase().contains("micro")) {
@@ -74,16 +74,16 @@ pipeline {
 						bat "if not exist ${deployDir} mkdir ${deployDir}"
 						bat "copy target\\${appJar} ${deployDir}\\ /Y"
 
-						// Alte Instanz stoppen
+						// Alte Instanz stoppen (nicht Jenkins)
 						bat "powershell -Command \"Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }\""
 
-						// Startskript schreiben + asynchron & fehlerfrei starten
+						// Startskript erzeugen und Jenkins-Exitcode fixen
 						bat """
 echo @echo off > ${deployDir}\\start_meditrack.bat
 echo cd /d ${deployDir} >> ${deployDir}\\start_meditrack.bat
 echo java -jar ${appJar} --server.port=${meditrackPort} >> ${deployDir}\\start_meditrack.bat
 start "" /min cmd /c ${deployDir}\\start_meditrack.bat
-cmd /c exit 0
+exit /b 0
 """
 						echo "🚀 MediTrack wurde in eigenem Prozess gestartet (Port ${meditrackPort})"
 					}
@@ -101,6 +101,7 @@ cmd /c exit 0
 
 					def healthy = false
 					for (int i = 1; i <= 5; i++) {
+						echo "⏳ Versuch ${i}..."
 						sleep time: 5, unit: 'SECONDS'
 						try {
 							def response = ""
@@ -112,7 +113,11 @@ cmd /c exit 0
 								response = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
 								content = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String -Pattern 'MediTrack' | Select -First 1\"", returnStdout: true).trim()
 							}
+
 							response = response.tokenize('\n').last().trim()
+							echo "ℹ️ HTTP Status: ${response}"
+							echo "🔎 Gefundener Inhalt: ${content}"
+
 							if ((response.contains("200") || response.contains("302")) && content.contains("MediTrack")) {
 								healthy = true
 								break
@@ -123,10 +128,10 @@ cmd /c exit 0
 					}
 
 					if (!healthy) {
-						error "❌ Health Check fehlgeschlagen – keine MediTrack-Antwort."
+						error "❌ Health Check fehlgeschlagen – keine gültige MediTrack-Antwort auf Port ${port}"
 					} else {
-						echo "✅ Anwendung läuft stabil auf Port ${port}."
-						echo "🔗 http://localhost:${port}"
+						echo "✅ Anwendung läuft stabil auf Port ${port} und liefert MediTrack-Startseite."
+						echo "🔗 Öffne: http://localhost:${port}"
 					}
 				}
 			}
