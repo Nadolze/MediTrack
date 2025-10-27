@@ -1,6 +1,5 @@
 pipeline {
 	agent any
-
 	environment {
 		APP_NAME = "MediTrack"
 		MAVEN_HOME = tool 'Maven 3.9.11'
@@ -20,12 +19,17 @@ pipeline {
 				script {
 					echo "🔧 Starte Build-Prozess..."
 					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
-					if (isUnix()) {
-						sh "${mvnCmd} clean package -DskipTests"
-					} else {
-						bat "${mvnCmd} clean package -DskipTests"
+
+					try {
+						if (isUnix()) {
+							sh "${mvnCmd} clean package -DskipTests"
+						} else {
+							bat "${mvnCmd} clean package -DskipTests"
+						}
+						echo "✅ Build erfolgreich."
+					} catch (err) {
+						error "❌ Maven-Build fehlgeschlagen!"
 					}
-					echo "✅ Build erfolgreich."
 				}
 			}
 		}
@@ -35,6 +39,7 @@ pipeline {
 				script {
 					echo "🧪 Führe Tests aus..."
 					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
+
 					if (isUnix()) {
 						sh "${mvnCmd} test"
 					} else {
@@ -50,52 +55,38 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					def currentUser = isUnix()
-					? sh(script: "whoami", returnStdout: true).trim()
-					: bat(script: "echo %USERNAME%", returnStdout: true).trim()
-
-					def meditrackPort = "8080"
-					if (currentUser.toLowerCase().contains("wolfdeleu") || currentUser.toLowerCase().contains("micro")) {
-						echo "👤 Build durch ${currentUser} erkannt – MediTrack läuft auf Port 9090 (kein Fallback)."
-						meditrackPort = "9090"
+					def currentUser = ""
+					if (!isUnix()) {
+						currentUser = bat(script: 'echo %USERNAME%', returnStdout: true).trim()
 					} else {
-						echo "👥 Standard-Build – MediTrack läuft auf Port 8080."
+						currentUser = sh(script: 'whoami', returnStdout: true).trim()
 					}
 
-					def deployDir = isUnix() ? "/opt/meditrack/main" : "C:\\meditrack\\main"
-					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
+					def port = (currentUser.toLowerCase().contains("micro") || currentUser.toLowerCase().contains("wolfdeleu")) ? "9090" : "8080"
+					echo "👤 Benutzer '${currentUser}' erkannt – MediTrack läuft auf Port ${port}"
 
 					if (isUnix()) {
-						// Linux
-						sh "mkdir -p ${deployDir}"
-						sh "cp target/${appJar} ${deployDir}/"
-						sh "fuser -k ${meditrackPort}/tcp || true"
-						sh "nohup java -jar ${deployDir}/${appJar} --server.port=${meditrackPort} > ${deployDir}/app.log 2>&1 &"
+						sh """
+                        mkdir -p /opt/meditrack/main
+                        cp target/mediweb-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
+                        pkill -f mediweb-0.0.1-SNAPSHOT.jar || true
+                        nohup java -jar /opt/meditrack/main/mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
+                        """
 					} else {
-						// Windows
-						bat "if not exist ${deployDir} mkdir ${deployDir}"
-						bat "copy target\\${appJar} ${deployDir}\\ /Y"
-
-						// Alte Instanzen stoppen (Sandbox-sicher)
+						def deployDir = "C:\\\\meditrack\\\\main"
 						bat """
-powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
-exit /b 0
-"""
+                        if not exist "${deployDir}" mkdir "${deployDir}"
+                        copy target\\mediweb-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
 
-						// Startskript erzeugen
-						bat """
-@echo off
-cd /d ${deployDir}
-echo @echo off > start_meditrack.bat
-echo cd /d ${deployDir} >> start_meditrack.bat
-echo java -jar ${appJar} --server.port=${meditrackPort} >> start_meditrack.bat
-start "" /min cmd /c start_meditrack.bat
-exit /b 0
-"""
-						echo "🚀 MediTrack gestartet (Port ${meditrackPort})"
+                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
+
+                        cd /d "${deployDir}"
+                        start /min cmd /c "java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > app.log 2>&1"
+                        """
+						echo "🚀 MediTrack gestartet (Port ${port})"
 					}
 
-					env.ACTIVE_PORT = meditrackPort
+					env.ACTIVE_PORT = port
 				}
 			}
 		}
@@ -110,6 +101,7 @@ exit /b 0
 					for (int i = 1; i <= 5; i++) {
 						echo "⏳ Versuch ${i}..."
 						sleep time: 5, unit: 'SECONDS'
+
 						try {
 							def response = ""
 							def content = ""
@@ -130,7 +122,7 @@ exit /b 0
 								break
 							}
 						} catch (err) {
-							echo "⚠️ Keine Antwort, versuche erneut..."
+							echo "⚠️ Keine Antwort erhalten, versuche erneut..."
 						}
 					}
 
