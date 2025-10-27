@@ -205,6 +205,7 @@ Ich sehe die Contexts in folgenden Bereichen:
 4) Erfassung Werte
 5) Alarmsystem / Notification-Center
 
+## 🧩 Bounded Context
 - Ein definierter Teil einer Software, welcher eigene Regeln, Grundsätze, Strategien oder Richtlinien besitzt, sowie eine eigene Sprache (Ubiquitous Language) aufweist.
 - Domains oder Subdomains können mehrere Bounded Contexts enthalten. Allerdings sollte sich ein Bounded Context nicht über mehrere Domains hinweg erstrecken. 
 
