@@ -19,17 +19,12 @@ pipeline {
 				script {
 					echo "🔧 Starte Build-Prozess..."
 					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
-
-					try {
-						if (isUnix()) {
-							sh "${mvnCmd} clean package -DskipTests"
-						} else {
-							bat "${mvnCmd} clean package -DskipTests"
-						}
-						echo "✅ Build erfolgreich."
-					} catch (err) {
-						error "❌ Maven-Build fehlgeschlagen!"
+					if (isUnix()) {
+						sh "${mvnCmd} clean package -DskipTests"
+					} else {
+						bat "${mvnCmd} clean package -DskipTests"
 					}
+					echo "✅ Build erfolgreich."
 				}
 			}
 		}
@@ -39,7 +34,6 @@ pipeline {
 				script {
 					echo "🧪 Führe Tests aus..."
 					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
-
 					if (isUnix()) {
 						sh "${mvnCmd} test"
 					} else {
@@ -55,22 +49,26 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
+					// Benutzer erkennen
 					def currentUser = ""
-					if (!isUnix()) {
-						currentUser = bat(script: 'echo %USERNAME%', returnStdout: true).trim()
+					if (isUnix()) {
+						currentUser = sh(script: "whoami", returnStdout: true).trim()
 					} else {
-						currentUser = sh(script: 'whoami', returnStdout: true).trim()
+						currentUser = bat(script: "echo %USERNAME%", returnStdout: true).trim()
 					}
 
+					// Port abhängig vom Benutzer
 					def port = (currentUser.toLowerCase().contains("micro") || currentUser.toLowerCase().contains("wolfdeleu")) ? "9090" : "8080"
 					echo "👤 Benutzer '${currentUser}' erkannt – MediTrack läuft auf Port ${port}"
 
+					// Betriebssystemabhängige Deployment-Strategie
 					if (isUnix()) {
 						sh """
                         mkdir -p /opt/meditrack/main
                         cp target/mediweb-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
                         pkill -f mediweb-0.0.1-SNAPSHOT.jar || true
                         nohup java -jar /opt/meditrack/main/mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
+                        echo "🚀 MediTrack wurde auf Port ${port} gestartet."
                         """
 					} else {
 						def deployDir = "C:\\\\meditrack\\\\main"
@@ -81,9 +79,12 @@ pipeline {
                         powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
 
                         cd /d "${deployDir}"
-                        start /min cmd /c "java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > app.log 2>&1"
+
+                        :: ⭐ Starte entkoppelt vom Jenkins-Service
+                        powershell -NoProfile -Command "Start-Process 'java' -ArgumentList '-jar mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > app.log 2>&1' -WindowStyle Hidden -WorkingDirectory '${deployDir}'"
+
+                        echo "🚀 MediTrack wurde als separater Prozess gestartet (Port ${port})"
                         """
-						echo "🚀 MediTrack gestartet (Port ${port})"
 					}
 
 					env.ACTIVE_PORT = port
@@ -98,7 +99,7 @@ pipeline {
 					echo "🔍 Überprüfe Erreichbarkeit auf http://localhost:${port}"
 
 					def healthy = false
-					for (int i = 1; i <= 5; i++) {
+					for (int i = 1; i <= 6; i++) {
 						echo "⏳ Versuch ${i}..."
 						sleep time: 5, unit: 'SECONDS'
 
@@ -122,14 +123,14 @@ pipeline {
 								break
 							}
 						} catch (err) {
-							echo "⚠️ Keine Antwort erhalten, versuche erneut..."
+							echo "⚠️ Keine Antwort erhalten, warte kurz..."
 						}
 					}
 
 					if (!healthy) {
-						error "❌ Health Check fehlgeschlagen – keine gültige MediTrack-Antwort auf Port ${port}"
+						error "❌ Health Check fehlgeschlagen – MediTrack antwortet nicht auf Port ${port}"
 					} else {
-						echo "✅ Anwendung läuft stabil auf Port ${port} und liefert MediTrack-Startseite."
+						echo "✅ Anwendung läuft stabil auf Port ${port}."
 						echo "🔗 Öffne: http://localhost:${port}"
 					}
 				}
