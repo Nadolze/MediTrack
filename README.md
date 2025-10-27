@@ -73,7 +73,7 @@ MediTrack/
 
 - Eine Möglichkeit, um zwischen Entwicklern und Domain Experten zu einem gemeinsamen Verständnis von User-Stories zu kommen.
 - Domain Event (Orange), HotSpot (rot), Actor (gelb)
-<img alt="Bild mit Post-Its zum Eventstorming" src="./Event-Storming-Neu.jpg">
+<img alt="Bild mit Post-Its zum Eventstorming" src="./Eventstorming_Neu_2.jpg">
 
 ## 🧩 Domänenmodell (Entwurf)
 
