@@ -138,7 +138,107 @@ Die Aufteilung in klar definierte Bounded Contexts ermöglicht:
 
 ---
 
+## 🧩 Entitäten und Aggregate definieren
 
+> In **MediTrack** werden zentrale Geschäftsobjekte als **Entitäten** modelliert.  
+> Mehrere Entitäten mit enger fachlicher Verbindung bilden gemeinsam ein **Aggregat**,  
+> das durch eine *Aggregate Root* verwaltet wird.  
+> Diese Struktur sorgt für Datenkonsistenz und klare fachliche Grenzen zwischen den Bereichen.
+
+---
+
+### 🧱 Patientenverwaltung
+- **Entität:** Patient
+- **Aggregate:** Patient
+    - Enthält alle Stammdaten des Patienten wie Name, Geburtsdatum, Kontaktdaten und medizinische Basisinformationen.
+    - Dient als zentrale *Aggregate Root* für abhängige Daten wie Vitalwerte, Behandlungen und Benachrichtigungen.
+
+---
+
+### ❤️ Vitaldatenmanagement
+- **Entität:** Vitalwert
+- **Aggregate:** Vitaldaten
+    - Beinhaltet alle Vitalparameter eines Patienten (z. B. Puls, Blutdruck, Temperatur).
+    - Stellt Logik zur Erfassung, Validierung und Schwellenwertprüfung bereit.
+    - Löst bei Überschreitung automatisch Events (z. B. *CriticalValueDetectedEvent*) aus, die im Benachrichtigungssystem verarbeitet werden.
+
+---
+
+### 🔔 Benachrichtigungssystem
+- **Entität:** Benachrichtigung / Alarm
+- **Aggregate:** Benachrichtigung
+    - Enthält Informationen über erkannte kritische Werte, deren Status und Zustellungsdetails.
+    - Wird vom *Vitaldaten*-Aggregat ausgelöst und referenziert Patient und medizinisches Personal.
+
+---
+
+### 🧾 Behandlungsmanagement
+- **Entität:** Behandlung
+- **Aggregate:** Behandlung
+    - Dokumentiert alle ärztlichen Maßnahmen, Diagnosen und Verlaufseinträge.
+    - Verknüpft Patient und behandelndes Personal.
+    - Dient als Basis für spätere Auswertungen oder Dokumentationen.
+
+---
+
+### 👩‍⚕️ Personalverwaltung
+- **Entität:** Benutzer (Arzt, Pflegekraft)
+- **Aggregate:** Personal
+    - Enthält Identitätsdaten, Rollen und Zugriffsrechte.
+    - Kann mehreren Patienten zugeordnet werden und erhält Benachrichtigungen aus dem Notification-Center.
+
+---
+
+### 💡 Zusammenfassung
+Jedes Aggregat bildet eine in sich konsistente Einheit innerhalb des Systems.  
+Zwischen den Aggregaten findet die Kommunikation über Domain-Events statt  
+(z. B. *Vitalwert überschreitet Grenzwert → löst Benachrichtigung aus*).
+
+---
+
+## ⚙️ Domain Services und Repositories
+
+> **Domain Services** kapseln fachliche Logik, die nicht direkt zu einer Entität gehört.  
+> **Repositories** sind für die Persistenz dieser Entitäten und Aggregate verantwortlich.  
+> Zusammen stellen sie die Schnittstelle zwischen Fachlogik und Datenhaltung dar.
+
+---
+
+### 🧠 Domain Services
+
+| Service | Aufgabe | Zugehöriger Bounded Context |
+|:--|:--|:--|
+| 🧍‍⚕️ **PatientenService** | Verwaltung der Patientenstammdaten (Erstellen, Aktualisieren, Löschen, Zuweisung an Ärzte) | Patientenverwaltung |
+| ❤️ **VitalwertService** | Erfassen, Prüfen und Validieren eingehender Vitaldaten; Erzeugung von Alarm-Events bei Grenzwertüberschreitung | Vitaldatenmanagement |
+| 🔔 **BenachrichtigungsService** | Erstellen und Versenden von Benachrichtigungen an zuständiges Personal | Benachrichtigungssystem |
+| 🧾 **BehandlungsService** | Verwaltung von Behandlungen, Diagnosen und Verlaufseinträgen | Behandlungsmanagement |
+| 🧠 **AnalyseService (optional)** | Analysiert historische Vitaldaten, erkennt Trends und Muster | Vitaldatenmanagement |
+
+---
+
+### 💾 Repositories
+
+| Repository | Methoden (Beispiele) | Zweck |
+|:--|:--|:--|
+| 🧍‍⚕️ **PatientRepository** | `findPatientById(id)`, `savePatient(patient)` | Verwaltung und Persistenz der Patientendaten |
+| ❤️ **VitalwertRepository** | `findVitalwertByPatient(patientId)`, `saveVitalwert(vitalwert)` | Speicherung und Analyse der Vitaldaten |
+| 🔔 **BenachrichtigungRepository** | `findAlertByStatus(status)`, `saveAlert(alert)` | Verwaltung von Alarmen und Benachrichtigungen |
+| 🧾 **BehandlungsRepository** | `findBehandlungById(id)`, `saveBehandlung(behandlung)` | Zugriff auf Behandlungs- und Verlaufseinträge |
+| 👩‍⚕️ **PersonalRepository** | `findPersonalByRole(role)`, `assignPatient(patientId)` | Verwaltung medizinischer Benutzerkonten und Zuweisungen |
+
+---
+
+### 🧩 Beispielhafte Service-Interaktion
+
+```plaintext
+1️⃣ Patient erfasst neue Vitaldaten.
+2️⃣ Der VitalwertService speichert die Werte im Repository.
+3️⃣ Das System prüft, ob Grenzwerte überschritten wurden.
+4️⃣ Bei Überschreitung: Event "Kritischer Wert erkannt".
+5️⃣ Der BenachrichtigungsService erstellt eine Benachrichtigung für das zuständige Personal.
+6️⃣ Das Personal reagiert darauf und dokumentiert die Maßnahme im BehandlungsService.
+```
+---
 
 ## 🧩 Domänenmodell (Entwurf)
 
