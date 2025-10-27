@@ -1,166 +1,156 @@
 pipeline {
-    agent any
-    environment {
-        APP_NAME = "MediTrack"
-        MAVEN_HOME = tool 'Maven 3.9.11'
-    }
+	agent any
+	environment {
+		APP_NAME = "MediTrack"
+		MAVEN_HOME = tool 'Maven 3.9.11'
+	}
 
-    stages {
+	stages {
 
-        stage('Checkout') {
-            steps {
-                echo "📦 Hole Code aus Git..."
-                checkout scm
-            }
-        }
+		stage('Checkout') {
+			steps {
+				echo "📦 Hole Code aus Git..."
+				checkout scm
+			}
+		}
 
-        stage('Build') {
-            steps {
-                script {
-                    echo "🔧 Starte Build-Prozess..."
-                    def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
+		stage('Build') {
+			steps {
+				script {
+					echo "🔧 Starte Build-Prozess..."
+					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
+					if (isUnix()) {
+						sh "${mvnCmd} clean package -DskipTests"
+					} else {
+						bat "${mvnCmd} clean package -DskipTests"
+					}
+					echo "✅ Build erfolgreich."
+				}
+			}
+		}
 
-                    try {
-                        if (isUnix()) {
-                            sh "${mvnCmd} clean package -DskipTests"
-                        } else {
-                            bat "${mvnCmd} clean package -DskipTests"
-                        }
-                        echo "✅ Build erfolgreich."
-                    } catch (err) {
-                        error "❌ Maven-Build fehlgeschlagen!"
-                    }
-                }
-            }
-        }
+		stage('Test') {
+			steps {
+				script {
+					echo "🧪 Führe Tests aus..."
+					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
+					if (isUnix()) {
+						sh "${mvnCmd} test"
+					} else {
+						bat "${mvnCmd} test"
+					}
+					echo "✅ Tests erfolgreich abgeschlossen."
+				}
+			}
+		}
 
-        stage('Test') {
-            steps {
-                script {
-                    echo "🧪 Führe Tests aus..."
-                    def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
+		stage('Deploy') {
+			steps {
+				script {
+					echo "🚀 Deployment wird vorbereitet..."
 
-                    if (isUnix()) {
-                        sh "${mvnCmd} test"
-                    } else {
-                        bat "${mvnCmd} test"
-                    }
-                    echo "✅ Tests erfolgreich abgeschlossen."
-                }
-            }
-        }
+					// Benutzername abfragen
+					def currentUser = ""
+					if (isUnix()) {
+						currentUser = sh(script: "whoami", returnStdout: true).trim()
+					} else {
+						currentUser = bat(script: "echo %USERNAME%", returnStdout: true).trim()
+					}
 
-        stage('Deploy') {
-            steps {
-                script {
-                    echo "🚀 Deployment wird vorbereitet..."
+					// Port abhängig vom Benutzer
+					def port = (currentUser.toLowerCase().contains("micro") || currentUser.toLowerCase().contains("wolfdeleu")) ? "9090" : "8080"
+					echo "👤 Benutzer '${currentUser}' erkannt – MediTrack läuft auf Port ${port}"
 
-                    def port = "9090"
-                    def fallbackPort = "9091"
-                    def deployDir = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}" : "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
-                    def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
+					if (isUnix()) {
+						// Linux / macOS Variante
+						sh """
+                        mkdir -p /opt/meditrack/main
+                        cp target/meditrack-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
+                        pkill -f meditrack-0.0.1-SNAPSHOT.jar || true
+                        nohup java -jar /opt/meditrack/main/meditrack-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
+                        echo "🚀 MediTrack wurde auf Port ${port} gestartet (Linux detached)."
+                        """
+					} else {
+						// ⭐ Windows mit WMI-Detach (läuft unabhängig von Jenkins)
+						def deployDir = "C:\\\\meditrack\\\\main"
+						bat """
+                        if not exist "${deployDir}" mkdir "${deployDir}"
+                        copy target\\meditrack-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
 
-                    // 🔍 Prüfe, ob Port belegt ist
-                    def portFree = false
-                    if (isUnix()) {
-                        def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
-                        portFree = result == ""
-                    } else {
-                        def result = bat(script: "netstat -ano | findstr :${port} || exit /B 0", returnStdout: true).trim()
-                        portFree = result == ""
-                    }
+                        :: Alte Instanzen stoppen
+                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'meditrack-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
 
-                    if (!portFree) {
-                        echo "⚠️ Port ${port} ist belegt – wechsle auf ${fallbackPort}"
-                        port = fallbackPort
-                    } else {
-                        echo "✅ Port ${port} ist frei."
-                    }
+                        cd /d "${deployDir}"
 
-                    // 📁 Deployment-Verzeichnis
-                    if (isUnix()) {
-                        sh "mkdir -p ${deployDir}"
-                        sh "cp target/${appJar} ${deployDir}/"
-                        sh "fuser -k ${port}/tcp || true"
-                        sh "nohup java -jar ${deployDir}/${appJar} --server.port=${port} --server.address=0.0.0.0 > ${deployDir}/app.log 2>&1 &"
-                    } else {
-                        bat "if not exist ${deployDir} mkdir ${deployDir}"
-                        bat "copy target\\${appJar} ${deployDir}\\ /Y"
+                        :: 🔥 Starte MediTrack vollständig losgelöst vom Jenkins-Service
+                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}', 0, \$false) }"
 
-                        // 🧹 Alte Instanz stoppen
-                        bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
+                        echo "🚀 MediTrack wurde via WMI-Detach gestartet (Port ${port})"
+                        """
+					}
 
-                        // 🧩 Neues Startskript erzeugen und im Hintergrund starten
-                        bat """
-echo @echo off > ${deployDir}\\start_meditrack.bat
-echo cd /d ${deployDir} >> ${deployDir}\\start_meditrack.bat
-echo java -jar ${appJar} --server.port=${port} >> ${deployDir}\\start_meditrack.bat
-start "" /min cmd /c ${deployDir}\\start_meditrack.bat
-"""
+					env.ACTIVE_PORT = port
+				}
+			}
+		}
 
-                        echo "🚀 MediTrack wurde in eigenem Prozess gestartet (Port ${port})"
-                    }
+		stage('Health Check') {
+			steps {
+				script {
+					def port = env.ACTIVE_PORT ?: "9090"
+					echo "🔍 Überprüfe Erreichbarkeit auf http://localhost:${port}"
 
-                    env.ACTIVE_PORT = port
-                }
-            }
-        }
+					def healthy = false
+					for (int i = 1; i <= 6; i++) {
+						echo "⏳ Versuch ${i}..."
+						sleep time: 5, unit: 'SECONDS'
 
-        stage('Health Check') {
-            steps {
-                script {
-                    def port = env.ACTIVE_PORT ?: "9090"
-                    echo "🔍 Überprüfe Erreichbarkeit und Inhalt auf http://localhost:${port}"
+						try {
+							def response = ""
+							def content = ""
+							if (isUnix()) {
+								response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
+								content = sh(script: "curl -s http://localhost:${port} | grep MediTrack || true", returnStdout: true).trim()
+							} else {
+								response = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
+								content = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String -Pattern 'MediTrack' | Select -First 1\"", returnStdout: true).trim()
+							}
 
-                    def healthy = false
-                    for (int i = 1; i <= 5; i++) {
-                        echo "⏳ Versuch ${i}..."
-                        sleep time: 5, unit: 'SECONDS'
+							response = response.tokenize('\n').last().trim()
+							echo "ℹ️ HTTP Status: ${response}"
+							echo "🔎 Gefundener Inhalt: ${content}"
 
-                        try {
-                            def response = ""
-                            def content = ""
-                            if (isUnix()) {
-                                response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
-                                content = sh(script: "curl -s http://localhost:${port} | grep MediTrack || true", returnStdout: true).trim()
-                            } else {
-                                response = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
-                                content = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).Content | Select-String -Pattern 'MediTrack' | Select -First 1\"", returnStdout: true).trim()
-                            }
+							if ((response.contains("200") || response.contains("302")) && content.contains("MediTrack")) {
+								healthy = true
+								break
+							}
+						} catch (err) {
+							echo "⚠️ Keine Antwort erhalten, warte kurz..."
+						}
+					}
 
-                            response = response.tokenize('\n').last().trim()
-                            echo "ℹ️ HTTP Status: ${response}"
-                            echo "🔎 Gefundener Inhalt: ${content}"
+					if (!healthy) {
+						error "❌ Health Check fehlgeschlagen – MediTrack antwortet nicht auf Port ${port}"
+					} else {
+						echo "✅ Anwendung läuft stabil auf Port ${port}."
+						echo "🔗 Öffne: http://localhost:${port}"
+					}
+				}
+			}
+		}
+	}
 
-                            if ((response.contains("200") || response.contains("302")) && content.contains("MediTrack")) {
-                                healthy = true
-                                break
-                            }
-                        } catch (err) {
-                            echo "⚠️ Keine Antwort erhalten, versuche erneut..."
-                        }
-                    }
+	post {
+		success {
+			echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
+			echo "WIN Powershell start mit: \"java -jar C:\meditrack\main\meditrack-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
+		}
+		failure {
+			echo "❌ Build oder Deployment fehlgeschlagen."
 
-                    if (!healthy) {
-                        error "❌ Health Check fehlgeschlagen – keine gültige MediTrack-Antwort auf Port ${port}"
-                    } else {
-                        echo "✅ Anwendung läuft stabil auf Port ${port} und liefert MediTrack-Startseite."
-                        echo "🔗 Öffne: http://localhost:${port}"
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
-        }
-        failure {
-            echo "❌ Build oder Deployment fehlgeschlagen."
-        }
-        always {
-            echo "🏁 Pipeline abgeschlossen."
-        }
-    }
+		}
+		always {
+			echo "🏁 Pipeline abgeschlossen."
+		}
+	}
 }
