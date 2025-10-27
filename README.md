@@ -69,11 +69,76 @@ MediTrack/
 
 ---
 
-## Eventstorming
+## 🧩 Eventstorming
 
-- Eine Möglichkeit, um zwischen Entwicklern und Domain Experten zu einem gemeinsamen Verständnis von User-Stories zu kommen.
-- Domain Event (Orange), HotSpot (rot), Actor (gelb)
-<img alt="Bild mit Post-Its zum Eventstorming" src="./Eventstorming_Neu_2.jpg">
+> *Event Storming* ist eine Methode, um zwischen **Entwicklern** und **Domain-Experten** ein gemeinsames Verständnis über die Domäne und deren Prozesse zu schaffen.  
+> Dabei werden die wichtigsten Ereignisse (Events) und deren Auslöser visuell dargestellt.
+
+### 🧠 Legende
+- 🟧 **Domain Event** – beschreibt eine fachliche Veränderung im System (z. B. *Patient hat Vitaldaten eingegeben*)
+- 🟥 **Hot Spot** – offener Punkt, Problem oder Diskussionsbedarf
+- 🟨 **Actor** – Akteur (z. B. Patient, medizinisches Personal)
+
+---
+
+### 🎯 Ziel
+Das Ziel der Session war, die Abläufe von **MediTrack** zu verstehen und die wichtigsten Ereignisse zu identifizieren – von der Registrierung bis zur Benachrichtigung bei kritischen Vitalwerten.
+
+---
+
+### 🧩 Hauptakteure
+| Akteur | Beschreibung |
+|:--|:--|
+| 🧍‍♂️ **Patient** | Gibt Gesundheits- und Vitaldaten ein, ruft Verlauf ab |
+| 🩺 **Personal** | Prüft Daten, ergänzt Behandlungen, verwaltet Profile |
+| ⚙️ **System** | Erkennt Trends und kritische Werte, löst Benachrichtigungen aus |
+
+---
+
+### 🔄 Beispielhafter Ablauf (vereinfacht)
+[Patient registriert] → [Patient erfasst Gesundheitsdaten] → [Patient gibt Vitaldaten ein] → [System erkennt kritischen Wert] → [Benachrichtigung an Personal] → [Personal prüft / reagiert] → [Behandlung hinzugefügt]
+
+---
+
+### 📸 Visualisierung
+
+<img alt="Eventstorming-Board der MediTrack-Domäne mit Post-Its" src="./Eventstorming_Neu_2.jpg" width="1200">
+
+> Die Abbildung zeigt das finale Event-Storming-Board der MediTrack-Domäne mit allen identifizierten Akteuren, Events und Hotspots.
+
+---
+
+## 🧩 Bounded Context
+
+> Ein *Bounded Context* ist ein klar abgegrenzter Teil einer Software,  
+> der **eigene Regeln, Strategien und eine eigene Fachsprache (Ubiquitous Language)** besitzt.  
+> Domains oder Subdomains können mehrere Bounded Contexts enthalten –  
+> jedoch sollte sich **ein einzelner Bounded Context niemals über mehrere Domains erstrecken.**
+
+---
+
+### 🧱 Überblick
+
+| Bounded Context | Verantwortlichkeiten | Beziehung zu anderen BCs |
+|:--|:--|:--|
+| 🧍‍⚕️ **Registrierungsvorgang** | Patienten und medizinisches Personal können sich registrieren und anmelden. | Voraussetzung für alle weiteren Bounded Contexts. |
+| 🧾 **Stammdatenerfassung** | Patienten können persönliche Daten (Name, Geburtsdatum, Krankheitsgeschichte) angeben und verwalten. | Die erfasste Krankheitsgeschichte wird vom BC **„Krankheitshistorie“** genutzt und dort erweitert. |
+| 🧬 **Krankheitshistorie** | Patienten und Ärzte können auf Krankheitsverläufe zugreifen und diese erweitern. | Baut auf den Informationen aus dem BC **„Stammdatenerfassung“** auf. |
+| ❤️ **Erfassung Werte** | Patienten-Vitalwerte werden erfasst, gespeichert und regelmäßig überprüft. | Wenn ein erfasster Wert den Schwellenwert überschreitet, wird das **Alarmsystem** aktiviert. |
+| 🔔 **Alarmsystem / Notification-Center** | Erkennt kritische Vitalwerte und benachrichtigt das zuständige Personal. | Nutzt und überwacht die Daten aus dem BC **„Erfassung Werte“**. |
+
+---
+
+### 💡 Fazit
+Die Aufteilung in klar definierte Bounded Contexts ermöglicht:
+- eine **bessere Entkopplung** der Fachlogik,
+- die **unabhängige Weiterentwicklung** einzelner Bereiche,
+- und die konsequente Anwendung der **DDD-Prinzipien** (Domain Driven Design).  
+  Jeder Kontext bildet damit eine eigene Mini-Domäne innerhalb von **MediTrack**.
+
+---
+
+
 
 ## 🧩 Domänenmodell (Entwurf)
 
@@ -189,25 +254,4 @@ direction BT
     Arzt -- Alarmeinstellungen : definiert
 
 ```
-
-## 🧩 Bounded Context (Entwurf)
-Hier müssen noch die Bounded Contexts erstellt werden. 
-Ich sehe die Contexts in folgenden Bereichen:
-1) Registrierungsvorgang Arzt/Patient
-2) Stammdatenerfassung
-3) Krankheitshistorie
-4) Erfassung Werte
-5) Alarmsystem / Notification-Center
-
-## 🧩 Bounded Context
-- Ein definierter Teil einer Software, welcher eigene Regeln, Grundsätze, Strategien oder Richtlinien besitzt, sowie eine eigene Sprache (Ubiquitous Language) aufweist.
-- Domains oder Subdomains können mehrere Bounded Contexts enthalten. Allerdings sollte sich ein Bounded Context nicht über mehrere Domains hinweg erstrecken. 
-
-| Bounded Context| Verantwortlichkeiten| Beziehung zu anderen BCs|
-|---------------|--------|----------------|
-| Registrierungsvorgang  | Patient/Arzt kann sich registrieren und anmelden. | Vorraussetzung für alle anderen BCs  |
-| Stammdatenerfassung | Patient kann seine Daten (Name, Geburtsdatum, Krankheitsgeschichte) angeben und verwalten. | Die angegebene Krankheitsgeschichte wird vom BC "Krankheitshistorie" verwendet und ggf. erweitert |
-| Krankheitshistorie| Patient/Arzt können auf Krankheitshistorien zugreifen und diese erweitern.| Die ursprüngliche Krankheitsgeschichte wird im BC "Stammdatenerfassung" erstellt. |
-| Erfassung Werte| Die Vitalwerte vom Patienten können erfasst und gespeichert werden.| Wenn der erfasste Wert seinen Schwellenwert übersteigt, wird das Alarmsystem aktiviert. |
-| Alarmsystem / Notification-Center| Es werden kritische Vitalwerte erkannt und der Arzt wird benachrichtigt.| Das Alarmsystem enthält und überprüft die Daten vom BC "Erfassung Werte". |
 
