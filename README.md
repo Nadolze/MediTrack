@@ -228,6 +228,65 @@ Zwischen den Aggregaten findet die Kommunikation über Domain-Events statt
 
 ---
 
+### 🕸️ Übersicht der Domänenlogik
+
+```mermaid
+flowchart TD
+
+    %% ================================
+    %%          AGGREGATES
+    %% ================================
+    subgraph Aggregates [Aggregate-Ebene]
+        A1[🧍‍⚕️ Patient]
+        A2[❤️ Vitaldaten]
+        A3[🔔 Benachrichtigung]
+        A4[🧾 Behandlung]
+        A5[👩‍⚕️ Personal]
+    end
+
+    %% ================================
+    %%          DOMAIN SERVICES
+    %% ================================
+    subgraph Services [Domain Services]
+        S1[🧍‍⚕️ PatientenService]
+        S2[❤️ VitalwertService]
+        S3[🔔 BenachrichtigungsService]
+        S4[🧾 BehandlungsService]
+        S5[🧠 AnalyseService]
+    end
+
+    %% ================================
+    %%          REPOSITORIES
+    %% ================================
+    subgraph Repositories [Repositories]
+        R1[(PatientRepository)]
+        R2[(VitalwertRepository)]
+        R3[(BenachrichtigungRepository)]
+        R4[(BehandlungsRepository)]
+        R5[(PersonalRepository)]
+    end
+
+    %% ================================
+    %%          VERBINDUNGEN
+    %% ================================
+    A1 -->|enthält| A2
+    A2 -->|löst aus| A3
+    A3 -->|informiert| A5
+    A5 -->|behandelt| A4
+    A1 -->|wird betreut von| A5
+
+    S1 --> R1
+    S2 --> R2
+    S3 --> R3
+    S4 --> R4
+    S5 --> R2
+
+    S2 --> S3
+    S3 --> A5
+    S4 --> A1
+```
+---
+
 ### 🧩 Beispielhafte Service-Interaktion
 
 ```plaintext
@@ -239,6 +298,8 @@ Zwischen den Aggregaten findet die Kommunikation über Domain-Events statt
 6️⃣ Das Personal reagiert darauf und dokumentiert die Maßnahme im BehandlungsService.
 ```
 ---
+
+
 
 ## 🧩 Domänenmodell (Entwurf)
 
