@@ -143,6 +143,7 @@ pipeline {
 	post {
 		success {
 			echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
+			echo "WIN Powershell start mit: \"java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
 		}
 		failure {
 			echo "❌ Build oder Deployment fehlgeschlagen."
