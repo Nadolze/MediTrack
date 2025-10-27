@@ -20,17 +20,12 @@ pipeline {
 				script {
 					echo "🔧 Starte Build-Prozess..."
 					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
-
-					try {
-						if (isUnix()) {
-							sh "${mvnCmd} clean package -DskipTests"
-						} else {
-							bat "${mvnCmd} clean package -DskipTests"
-						}
-						echo "✅ Build erfolgreich."
-					} catch (err) {
-						error "❌ Maven-Build fehlgeschlagen!"
+					if (isUnix()) {
+						sh "${mvnCmd} clean package -DskipTests"
+					} else {
+						bat "${mvnCmd} clean package -DskipTests"
 					}
+					echo "✅ Build erfolgreich."
 				}
 			}
 		}
@@ -40,7 +35,6 @@ pipeline {
 				script {
 					echo "🧪 Führe Tests aus..."
 					def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
-
 					if (isUnix()) {
 						sh "${mvnCmd} test"
 					} else {
@@ -56,45 +50,32 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					// Feste Ports
-					def jenkinsPort = "9091"
-					def meditrackPort = "9090"
-					def fallbackPort = "8080"
+					// === Portlogik ===================================
+					def currentUser = isUnix() ? sh(script: "whoami", returnStdout: true).trim() : bat(script: "echo %USERNAME%", returnStdout: true).trim()
+					def meditrackPort = "8080"
+
+					// Wenn du (wolfdeleu oder micro) baust → Port 9090 erzwingen
+					if (currentUser.toLowerCase().contains("wolfdeleu") || currentUser.toLowerCase().contains("micro")) {
+						echo "👤 Build durch ${currentUser} erkannt – MediTrack läuft auf 9090 (kein Fallback)."
+						meditrackPort = "9090"
+					} else {
+						echo "👥 Standard-Build – MediTrack läuft auf 8080."
+					}
+
 					def deployDir = isUnix() ? "/opt/meditrack/main" : "C:\\meditrack\\main"
 					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-					// Prüfen, ob Jenkins selbst läuft
-					echo "ℹ️ Jenkins läuft auf Port ${jenkinsPort}"
-
-					// Portprüfung für MediTrack
-					def portFree = false
-					if (isUnix()) {
-						def result = sh(script: "netstat -tuln | grep ${meditrackPort} || true", returnStdout: true).trim()
-						portFree = result == ""
-					} else {
-						def result = bat(script: "netstat -ano | findstr :${meditrackPort} || exit /B 0", returnStdout: true).trim()
-						portFree = result == ""
-					}
-
-					if (!portFree) {
-						echo "⚠️ Port ${meditrackPort} ist belegt – wechsle auf ${fallbackPort}"
-						meditrackPort = fallbackPort
-					} else {
-						echo "✅ Port ${meditrackPort} ist frei."
-					}
-
-					// Deployment-Verzeichnis erstellen
+					// === Deployment-Ordner vorbereiten ===============
 					if (isUnix()) {
 						sh "mkdir -p ${deployDir}"
 						sh "cp target/${appJar} ${deployDir}/"
-						// MediTrack stoppen (nicht Jenkins)
 						sh "fuser -k ${meditrackPort}/tcp || true"
 						sh "nohup java -jar ${deployDir}/${appJar} --server.port=${meditrackPort} > ${deployDir}/app.log 2>&1 &"
 					} else {
 						bat "if not exist ${deployDir} mkdir ${deployDir}"
 						bat "copy target\\${appJar} ${deployDir}\\ /Y"
 
-						// MediTrack stoppen, aber Jenkins laufen lassen
+						// MediTrack stoppen (nicht Jenkins)
 						bat "powershell -Command \"Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }\""
 
 						// Neues Startskript erzeugen
