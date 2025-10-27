@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         APP_NAME = "MediTrack"
-        MAVEN_HOME = tool 'Maven 3.9.11'
+        MAVEN_HOME = tool 'Maven 3.8.7'
     }
 
     stages {
