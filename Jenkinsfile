@@ -50,12 +50,10 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					// Benutzerkennung ermitteln
 					def currentUser = isUnix()
 					? sh(script: "whoami", returnStdout: true).trim()
 					: bat(script: "echo %USERNAME%", returnStdout: true).trim()
 
-					// Port-Zuweisung
 					def meditrackPort = "8080"
 					if (currentUser.toLowerCase().contains("wolfdeleu") || currentUser.toLowerCase().contains("micro")) {
 						echo "👤 Build durch ${currentUser} erkannt – MediTrack läuft auf Port 9090 (kein Fallback)."
@@ -68,25 +66,23 @@ pipeline {
 					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
 					if (isUnix()) {
-						// Linux-Deployment
+						// Linux
 						sh "mkdir -p ${deployDir}"
 						sh "cp target/${appJar} ${deployDir}/"
 						sh "fuser -k ${meditrackPort}/tcp || true"
 						sh "nohup java -jar ${deployDir}/${appJar} --server.port=${meditrackPort} > ${deployDir}/app.log 2>&1 &"
 					} else {
-						// Windows-Deployment
+						// Windows
 						bat "if not exist ${deployDir} mkdir ${deployDir}"
 						bat "copy target\\${appJar} ${deployDir}\\ /Y"
 
-						// Alte Instanzen stoppen
+						// Alte Instanzen stoppen (Sandbox-sicher)
 						bat """
-powershell -NoProfile -Command ^
-  "$p = Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' }; ^
-   if ($p) { $p | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force } }"
+powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
 exit /b 0
 """
 
-						// Startskript erzeugen und MediTrack im Hintergrund starten
+						// Startskript erzeugen
 						bat """
 @echo off
 cd /d ${deployDir}
