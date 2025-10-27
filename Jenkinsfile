@@ -65,9 +65,9 @@ pipeline {
 						// Linux / macOS Variante
 						sh """
                         mkdir -p /opt/meditrack/main
-                        cp target/mediweb-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
-                        pkill -f mediweb-0.0.1-SNAPSHOT.jar || true
-                        nohup java -jar /opt/meditrack/main/mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
+                        cp target/meditrack-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
+                        pkill -f meditrack-0.0.1-SNAPSHOT.jar || true
+                        nohup java -jar /opt/meditrack/main/meditrack-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
                         echo "🚀 MediTrack wurde auf Port ${port} gestartet (Linux detached)."
                         """
 					} else {
@@ -75,15 +75,15 @@ pipeline {
 						def deployDir = "C:\\\\meditrack\\\\main"
 						bat """
                         if not exist "${deployDir}" mkdir "${deployDir}"
-                        copy target\\mediweb-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
+                        copy target\\meditrack-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
 
                         :: Alte Instanzen stoppen
-                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
+                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'meditrack-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
 
                         cd /d "${deployDir}"
 
                         :: 🔥 Starte MediTrack vollständig losgelöst vom Jenkins-Service
-                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=${port}', 0, \$false) }"
+                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}', 0, \$false) }"
 
                         echo "🚀 MediTrack wurde via WMI-Detach gestartet (Port ${port})"
                         """
@@ -146,7 +146,7 @@ pipeline {
 		}
 		failure {
 			echo "❌ Build oder Deployment fehlgeschlagen."
-			echo "WIN Powershell start mit: \"java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
+			echo "WIN Powershell start mit: \"java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
 		}
 		always {
 			echo "🏁 Pipeline abgeschlossen."
