@@ -55,24 +55,19 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					// ⚙️ Portlogik
 					def jenkinsPort = "9091"
-					def defaultPort = "9090"
+					def myPort = "9090"
 					def fallbackPort = "8080"
+					def port = fallbackPort
 
-					def user = env.BUILD_USER_ID ?: ""
-					def port = (user == "wolfdeleu") ? defaultPort : fallbackPort
-
-					// Wenn Jenkins selbst läuft, Port 9091 reservieren
-					if (env.JENKINS_URL) {
-						echo "ℹ️ Jenkins-Instanz erkannt – reserviere Port ${jenkinsPort} für Jenkins"
-						if (port == jenkinsPort) {
-							echo "⚠️ Port ${jenkinsPort} gehört Jenkins – wechsle auf ${fallbackPort}"
-							port = fallbackPort
-						}
+					// Nur für deinen Benutzer auf 9090
+					if (env.BUILD_USER_ID == "wolfdeleu") {
+						port = myPort
 					}
 
-					// 🔍 Prüfen, ob Port frei
+					echo "ℹ️ Jenkins läuft auf ${jenkinsPort}, ${env.BUILD_USER_ID ?: 'unbekannter User'} verwendet ${port}"
+
+					// Prüfen, ob Port frei
 					def portFree = false
 					if (isUnix()) {
 						def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
@@ -83,19 +78,25 @@ pipeline {
 					}
 
 					if (!portFree) {
-						echo "⚠️ Port ${port} ist belegt – wechsle auf ${fallbackPort}"
-						port = fallbackPort
+						echo "⚠️ Port ${port} ist belegt."
+						if (port == myPort) {
+							echo "👉 Wechsle auf Fallback-Port ${fallbackPort}."
+							port = fallbackPort
+						} else {
+							echo "⛔ Kein alternativer Port verfügbar, Abbruch."
+							error "Kein freier Port gefunden!"
+						}
 					} else {
 						echo "✅ Port ${port} ist frei."
 					}
 
-					// 📁 Deploy-Verzeichnis
+					// Deployment-Verzeichnis
 					def deployDir = isUnix()
 					? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}"
 					: "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
 					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-					// 🧹 Alte MediTrack-Instanz stoppen (nicht Jenkins!)
+					// Alte MediTrack-Instanz stoppen
 					if (isUnix()) {
 						sh "fuser -k ${port}/tcp || true"
 					} else {
@@ -104,7 +105,7 @@ powershell -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLin
 """
 					}
 
-					// 🚀 Neue Instanz starten
+					// Neue MediTrack-Instanz starten
 					if (isUnix()) {
 						sh "mkdir -p ${deployDir}"
 						sh "cp target/${appJar} ${deployDir}/"
