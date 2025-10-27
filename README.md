@@ -125,75 +125,69 @@ erDiagram
 ## 🧩 Domänenmodell (Entwurf2)
 
 ```mermaid
-erDiagram
-    USER ||--o{ PATIENT : verwaltet
-    USER ||--o{ ARZT : verwaltet
-    TREATMENT ||--o{ VITALREADING : enthält
-    ALERTRULE ||--o{ ALERT : erzeugt
-    ARZT ||--o{ ALERT : erhält
-    ARZT ||--o{ PATIENT : betreut
-    PATIENT ||--o{ ALERT : erhält
-    TREATMENT ||--o{ ALERTRULE : definiert
-    PATIENT ||--o{ KRANKENGESCHICHTE : hat
-    KRANKENGESCHICHTE ||--o{ KRANKHEIT : hat
-    KRANKHEIT ||--o{ TREATMENT : bedarf
-    VITALREADING ||--o{ ALERT : löst_aus
-    ARZT ||--o{ VITALREADING : führt_durch 
+---
+config:
+  layout: dagre
+---
+classDiagram
+direction BT
+    class Patient {
+	    geburtsdatum: date
+	    krankengeschichte: krankheit
+    }
+    class Arzt {
+	    personalnummer: int
+	    name: string
+    }
+    class Krankheit {
+	    name: string
+	    nummer: int
+	    behandlung: Behandlung
+    }
+    class Behandlung {
+	    name: string
+	    beschreibung: string
+	    anfangsdatum: date
+	    vitalwerte: Vitalreading
+	    abgeschlossen: boolean
+    }
+    class User {
+	    id int
+	    name string
+	    email string
+    }
+    class Vitalreading {
+	    id: int
+	    timestamp: datetime
+	    typ: string
+	    wert: float
+	    einheit: string
+    }
+    class Alarm {
+	    id: int
+	    zeitpunkt: datetime
+	    status: string
+    }
+    class Alarmeinstellungen {
+	    id: int
+	    wert_name: string
+	    wert_min: float
+	    wert_max: float
+    }
 
+    Patient --|> User
+    Arzt --|> User
+    Arzt --> Patient : betreut
+    Patient --> Krankheit : hat
+    Arzt --> Krankheit : diagnostiziert
+    Behandlung --> Krankheit : behandelt
+    Vitalreading --> Behandlung : trackt
+    Vitalreading -- Alarm : löst aus
+    Alarm -- Arzt : informiert
+    Alarm -- Patient : informiert
+    Alarmeinstellungen --|> Alarm
+    Arzt -- Alarmeinstellungen : definiert
 
-    USER {
-        id int
-        name string
-        email string
-        role string
-    }
-    PATIENT {
-        id int
-        geburtsdatum date
-        krankengeschichte KRANKENGESCHICHTE
-    }
-    KRANKENGESCHICHTE {
-        id int
-        kankheit KRANKHEIT
-        }
-    KRANKHEIT {
-        id int
-        name string
-        diagnosedatum date
-        treatment TREATMENT
-        aktiv boolean
-        ende date
-    }   
-    ARZT {
-        id int
-        personalnumer int
-        patienten PATIENT
-    }
-    VITALREADING {
-        id int
-        typ string
-        wert float
-        einheit string
-        timestamp datetime
-    }
-    TREATMENT {
-        id int
-        art string
-        beschreibung string
-        datum date
-        vitalreading VITALREADING
-    }
-    ALERTRULE {
-        id int
-        typ string
-        operator string
-        schwelle float
-    }
-    ALERT {
-        id int
-        erstellt_am datetime
-        status string
-    }
 ```
 
 ## 🧩 Bounded Context (Entwurf)
