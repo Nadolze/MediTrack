@@ -55,7 +55,7 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					// ⚙️ Port-Logik
+					// ⚙️ Portlogik
 					def jenkinsPort = "9091"
 					def defaultPort = "9090"
 					def fallbackPort = "8080"
@@ -63,16 +63,16 @@ pipeline {
 					def user = env.BUILD_USER_ID ?: ""
 					def port = (user == "wolfdeleu") ? defaultPort : fallbackPort
 
-					// Wenn Jenkins selbst der ausführende Host ist → 9091 blocken
+					// Wenn Jenkins selbst läuft, Port 9091 reservieren
 					if (env.JENKINS_URL) {
-						echo "ℹ️ Jenkins-Build erkannt – Hauptinstanz läuft auf ${jenkinsPort}"
+						echo "ℹ️ Jenkins-Instanz erkannt – reserviere Port ${jenkinsPort} für Jenkins"
 						if (port == jenkinsPort) {
 							echo "⚠️ Port ${jenkinsPort} gehört Jenkins – wechsle auf ${fallbackPort}"
 							port = fallbackPort
 						}
 					}
 
-					// 🔍 Portprüfung
+					// 🔍 Prüfen, ob Port frei
 					def portFree = false
 					if (isUnix()) {
 						def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
@@ -89,22 +89,29 @@ pipeline {
 						echo "✅ Port ${port} ist frei."
 					}
 
-					// 📁 Deployment-Ziel
+					// 📁 Deploy-Verzeichnis
 					def deployDir = isUnix()
 					? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}"
 					: "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
 					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
 
-					// 🧹 Alte Instanz beenden und neue starten
+					// 🧹 Alte MediTrack-Instanz stoppen (nicht Jenkins!)
+					if (isUnix()) {
+						sh "fuser -k ${port}/tcp || true"
+					} else {
+						bat """
+powershell -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
+"""
+					}
+
+					// 🚀 Neue Instanz starten
 					if (isUnix()) {
 						sh "mkdir -p ${deployDir}"
 						sh "cp target/${appJar} ${deployDir}/"
-						sh "fuser -k ${port}/tcp || true"
 						sh "nohup java -jar ${deployDir}/${appJar} --server.port=${port} > ${deployDir}/app.log 2>&1 &"
 					} else {
 						bat "if not exist ${deployDir} mkdir ${deployDir}"
 						bat "copy target\\${appJar} ${deployDir}\\ /Y"
-						bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
 
 						bat """
 echo @echo off > ${deployDir}\\start_meditrack.bat
