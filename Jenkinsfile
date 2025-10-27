@@ -82,7 +82,7 @@ pipeline {
                         sh "mkdir -p ${deployDir}"
                         sh "cp target/${appJar} ${deployDir}/"
                         sh "fuser -k ${port}/tcp || true"
-                        sh "nohup java -jar ${deployDir}/${appJar} --server.port=${port} --server.address 0.0.0.0 > ${deployDir}/app.log 2>&1 &"
+                        sh "nohup java -jar ${deployDir}/${appJar} --server.port=${port} --server.address=0.0.0.0 > ${deployDir}/app.log 2>&1 &"
                     } else {
                         bat "if not exist ${deployDir} mkdir ${deployDir}"
                         bat "copy target\\${appJar} ${deployDir}\\ /Y"
