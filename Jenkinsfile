@@ -68,11 +68,7 @@ pipeline {
 						port = fallbackPort
 					}
 
-					def deployDir = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}"
-					: "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
-					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
-
-					// 🔍 Prüfe, ob Port belegt ist
+					// 🔍 Port prüfen
 					def portFree = false
 					if (isUnix()) {
 						def result = sh(script: "netstat -tuln | grep ${port} || true", returnStdout: true).trim()
@@ -89,7 +85,12 @@ pipeline {
 						echo "✅ Port ${port} ist frei."
 					}
 
-					// 📁 Deployment-Verzeichnis
+					def deployDir = isUnix()
+					? "/opt/meditrack/${env.BRANCH_NAME ?: 'main'}"
+					: "C:\\meditrack\\${env.BRANCH_NAME ?: 'main'}"
+					def appJar = "mediweb-0.0.1-SNAPSHOT.jar"
+
+					// 📁 Deployment
 					if (isUnix()) {
 						sh "mkdir -p ${deployDir}"
 						sh "cp target/${appJar} ${deployDir}/"
@@ -99,10 +100,8 @@ pipeline {
 						bat "if not exist ${deployDir} mkdir ${deployDir}"
 						bat "copy target\\${appJar} ${deployDir}\\ /Y"
 
-						// 🧹 Alte Instanz stoppen
 						bat "powershell -Command \"Stop-Process -Name java -ErrorAction SilentlyContinue\""
 
-						// 🧩 Neues Startskript erzeugen und im Hintergrund starten
 						bat """
 echo @echo off > ${deployDir}\\start_meditrack.bat
 echo cd /d ${deployDir} >> ${deployDir}\\start_meditrack.bat
