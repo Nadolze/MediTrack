@@ -49,7 +49,7 @@ pipeline {
 				script {
 					echo "🚀 Deployment wird vorbereitet..."
 
-					// Benutzername ermitteln
+					// Benutzername abfragen
 					def currentUser = ""
 					if (isUnix()) {
 						currentUser = sh(script: "whoami", returnStdout: true).trim()
@@ -57,35 +57,35 @@ pipeline {
 						currentUser = bat(script: "echo %USERNAME%", returnStdout: true).trim()
 					}
 
-					// Port-Zuordnung
+					// Port abhängig vom Benutzer
 					def port = (currentUser.toLowerCase().contains("micro") || currentUser.toLowerCase().contains("wolfdeleu")) ? "9090" : "8080"
-					echo "👤 Benutzer '${currentUser}' erkannt – ${APP_NAME} läuft auf Port ${port}"
+					echo "👤 Benutzer '${currentUser}' erkannt – MediTrack läuft auf Port ${port}"
 
 					if (isUnix()) {
-						// Linux/macOS
+						// Linux / macOS Variante
 						sh """
                         mkdir -p /opt/meditrack/main
-                        cp target/meditrack-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
-                        pkill -f meditrack-0.0.1-SNAPSHOT.jar || true
-                        nohup java -jar /opt/meditrack/main/meditrack-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
-                        echo "🚀 ${APP_NAME} gestartet (Port ${port})"
+                        cp target/mediweb-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
+                        pkill -f mediweb-0.0.1-SNAPSHOT.jar || true
+                        nohup java -jar /opt/meditrack/main/mediweb-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
+                        echo "🚀 MediTrack wurde auf Port ${port} gestartet (Linux detached)."
                         """
 					} else {
-						// Windows (läuft unabhängig vom Jenkins-Dienst)
+						// ⭐ Windows mit WMI-Detach (läuft unabhängig von Jenkins)
 						def deployDir = "C:\\\\meditrack\\\\main"
 						bat """
                         if not exist "${deployDir}" mkdir "${deployDir}"
-                        copy target\\meditrack-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
+                        copy target\\mediweb-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
 
-                        :: Alte Instanzen beenden
-                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'meditrack-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
+                        :: Alte Instanzen stoppen
+                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'mediweb-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
 
                         cd /d "${deployDir}"
 
-                        :: Starte MediTrack entkoppelt vom Jenkins-Dienst
-                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}', 0, \$false) }"
+                        :: 🔥 Starte MediTrack vollständig losgelöst vom Jenkins-Service
+                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=${port}', 0, \$false) }"
 
-                        echo "🚀 ${APP_NAME} gestartet (Port ${port})"
+                        echo "🚀 MediTrack wurde via WMI-Detach gestartet (Port ${port})"
                         """
 					}
 
@@ -125,14 +125,14 @@ pipeline {
 								break
 							}
 						} catch (err) {
-							echo "⚠️ Keine Antwort erhalten, erneuter Versuch..."
+							echo "⚠️ Keine Antwort erhalten, warte kurz..."
 						}
 					}
 
 					if (!healthy) {
-						error "❌ Health Check fehlgeschlagen – ${APP_NAME} antwortet nicht auf Port ${port}"
+						error "❌ Health Check fehlgeschlagen – MediTrack antwortet nicht auf Port ${port}"
 					} else {
-						echo "✅ ${APP_NAME} läuft stabil auf Port ${port}."
+						echo "✅ Anwendung läuft stabil auf Port ${port}."
 						echo "🔗 Öffne: http://localhost:${port}"
 					}
 				}
@@ -143,10 +143,10 @@ pipeline {
 	post {
 		success {
 			echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
-			echo "WIN Powershell start mit: \"java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
 		}
 		failure {
 			echo "❌ Build oder Deployment fehlgeschlagen."
+			echo "WIN Powershell start mit: \"java -jar mediweb-0.0.1-SNAPSHOT.jar --server.port=9090\" oder 8080"
 		}
 		always {
 			echo "🏁 Pipeline abgeschlossen."
