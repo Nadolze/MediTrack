@@ -107,6 +107,74 @@ Das Ziel der Session war, die Abläufe von **MediTrack** zu verstehen und die wi
 > Die Abbildung zeigt das finale Event-Storming-Board der MediTrack-Domäne mit allen identifizierten Akteuren, Events und Hotspots.
 
 ---
+## 🧩 Domänenmodell (Entwurf nach UML)
+
+```mermaid
+---
+config:
+  layout: dagre
+---
+classDiagram
+direction BT
+    class Patient {
+	    geburtsdatum: date
+	    krankengeschichte: krankheit
+    }
+    class Arzt {
+	    personalnummer: int
+	    name: string
+    }
+    class Krankheit {
+	    name: string
+	    nummer: int
+	    behandlung: Behandlung
+    }
+    class Behandlung {
+	    name: string
+	    beschreibung: string
+	    anfangsdatum: date
+	    vitalwerte: Vitalreading
+	    abgeschlossen: boolean
+    }
+    class User {
+	    id int
+	    name string
+	    email string
+    }
+    class Vitalreading {
+	    id: int
+	    timestamp: datetime
+	    typ: string
+	    wert: float
+	    einheit: string
+    }
+    class Alarm {
+	    id: int
+	    zeitpunkt: datetime
+	    status: string
+    }
+    class Alarmeinstellungen {
+	    id: int
+	    wert_name: string
+	    wert_min: float
+	    wert_max: float
+    }
+
+    Patient --|> User
+    Arzt --|> User
+    Arzt --> Patient : betreut
+    Patient --> Krankheit : hat
+    Arzt --> Krankheit : diagnostiziert
+    Behandlung --> Krankheit : behandelt
+    Vitalreading --> Behandlung : trackt
+    Vitalreading -- Alarm : löst aus
+    Alarm -- Arzt : informiert
+    Alarm -- Patient : informiert
+    Alarmeinstellungen --|> Alarm
+    Arzt -- Alarmeinstellungen : definiert
+
+```
+---
 
 ## 🧩 Bounded Context
 
@@ -298,121 +366,3 @@ flowchart TD
 6️⃣ Das Personal reagiert darauf und dokumentiert die Maßnahme im BehandlungsService.
 ```
 ---
-
-
-
-## 🧩 Domänenmodell (Entwurf)
-
-```mermaid
-erDiagram
-    USER ||--o{ PATIENT : verwaltet
-    PATIENT ||--o{ VITALREADING : enthält
-    PATIENT ||--o{ TREATMENT : hat
-    ALERTRULE ||--o{ ALERT : erzeugt
-    USER ||--o{ ALERT : erhält
-
-    USER {
-        id int
-        name string
-        email string
-        role string
-    }
-    PATIENT {
-        id int
-        geburtsdatum date
-        krankengeschichte string
-    }
-    VITALREADING {
-        id int
-        typ string
-        wert float
-        einheit string
-        timestamp datetime
-    }
-    TREATMENT {
-        id int
-        art string
-        beschreibung string
-        datum date
-    }
-    ALERTRULE {
-        id int
-        typ string
-        operator string
-        schwelle float
-    }
-    ALERT {
-        id int
-        erstellt_am datetime
-        status string
-    }
-
-```
-## 🧩 Domänenmodell (Entwurf2)
-
-```mermaid
----
-config:
-  layout: dagre
----
-classDiagram
-direction BT
-    class Patient {
-	    geburtsdatum: date
-	    krankengeschichte: krankheit
-    }
-    class Arzt {
-	    personalnummer: int
-	    name: string
-    }
-    class Krankheit {
-	    name: string
-	    nummer: int
-	    behandlung: Behandlung
-    }
-    class Behandlung {
-	    name: string
-	    beschreibung: string
-	    anfangsdatum: date
-	    vitalwerte: Vitalreading
-	    abgeschlossen: boolean
-    }
-    class User {
-	    id int
-	    name string
-	    email string
-    }
-    class Vitalreading {
-	    id: int
-	    timestamp: datetime
-	    typ: string
-	    wert: float
-	    einheit: string
-    }
-    class Alarm {
-	    id: int
-	    zeitpunkt: datetime
-	    status: string
-    }
-    class Alarmeinstellungen {
-	    id: int
-	    wert_name: string
-	    wert_min: float
-	    wert_max: float
-    }
-
-    Patient --|> User
-    Arzt --|> User
-    Arzt --> Patient : betreut
-    Patient --> Krankheit : hat
-    Arzt --> Krankheit : diagnostiziert
-    Behandlung --> Krankheit : behandelt
-    Vitalreading --> Behandlung : trackt
-    Vitalreading -- Alarm : löst aus
-    Alarm -- Arzt : informiert
-    Alarm -- Patient : informiert
-    Alarmeinstellungen --|> Alarm
-    Arzt -- Alarmeinstellungen : definiert
-
-```
-
