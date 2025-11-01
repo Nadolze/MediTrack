@@ -4,6 +4,19 @@
 
 ---
 
+# 🩺 MediTrack 
+
+(dieser Abschnitt gehört dann in die neue ReadMe die dann nicht mehr nach den Übungen, sondern nach Projekt an sich gegliedert ist)
+
+![Java CI with Maven](https://github.com/Nadolze/MediTrack/actions/workflows/maven-tests.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Java](https://img.shields.io/badge/Java-21-orange.svg)
+
+> Automatisierte Build- und Testpipeline mit **GitHub Actions (CI/CD)**  
+> führt bei jedem Push `mvn clean test` aus und überprüft alle Unit-Tests.
+
+---
+
 ## 📋 Projektübersicht
 
 **Ziel:**  
