@@ -38,9 +38,6 @@ Ein System, das Patientendaten sicher verwaltet, Vitalwerte überwacht und bei k
 | Konstantin Königshofen  | k.koenigshofen@ostfalia.de               | konstantink4120  |
 | Timo Nadolny            | timo.nadolny@stud.th-luebeck.de          | nadolzetimo      |
 | Marcell Wolf de Lêu     | bht@wolfdel.eu                           | wolfdeleu        |
-| ~~Lea Ebitsch~~         | ~~ebitsch@th-brandenburg.de~~            | ~~leae1010~~     |
-| ~~Jessica Windoffer~~   | ~~jessica.windoffer@stud.th-luebeck.de~~ | ~~j.windoffer~~  |
-
 
 ---
 
