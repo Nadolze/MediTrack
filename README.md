@@ -50,11 +50,47 @@ Ein System, das Patientendaten sicher verwaltet, Vitalwerte überwacht und bei k
 
 ```plaintext
 MediTrack/
-├── backend/
-│ ├── src/
-│ └── target/
+├── .github/
+│ └── workflows/
+| 	  └── maven-tests.yml
+├── .idea/
+├── Uebungen/
+│ 	├── Uebung1/
+| 	|   └── 1-Uebung.pdf
+│ 	├── Uebung2/
+| 	|   └── 2-Uebung.pdf
+│ 	├── Uebung3/
+| 	|   └── 3-Uebung.pdf
+│ 	├── Uebung4/
+| 	|   └── 4-Uebung.pdf
+│ 	├── Uebung5/
+| 	|   └── 5-Uebung.pdf
+│ 	├── src/
+| 	|   └── images
+|   └── 3-Uebung-MediTrack.pdf (ToDo: in Ordner 3 kopieren)
+|   └── README.md (Aufgebläht durch Übungen und nicht rein projektbezogen)
 ...
-└── README.md
+ToDo: src Folder hinzufügen
+...
+├── target/
+│ └── classes/
+| 	  ├── META-INF
+| 	  |   └── maven
+| 	  |       └── archetype.xml
+| 	  ├── archetype-resources
+| 	  |       └── src
+| 	  |       |   ├── main
+| 	  |       |   |   └── java
+| 	  |       |   |       └── App.java
+| 	  |       |   └── test
+| 	  |       |       └── java
+| 	  |       |           └── App.java
+| 	  |       └── pom.xml
+| 	  └── application.properties
+├── .gitignore
+├── Jenkinsfile
+├── README.md
+└── pom.xml
 ```
 
 ---
