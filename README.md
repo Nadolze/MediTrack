@@ -35,9 +35,9 @@ Ein System, das Patientendaten sicher verwaltet, Vitalwerte überwacht und bei k
 
 | Name                    | E-Mail                                   | Discord          |
 |-------------------------|------------------------------------------|------------------|
-| Konstantin Königshofen  | k.koenigshofen@ostfalia.de               | konstantink4120  |
-| Timo Nadolny            | timo.nadolny@stud.th-luebeck.de          | nadolzetimo      |
-| Marcell Wolf de Lêu     | bht@wolfdel.eu                           | wolfdeleu        |
+| Konstantin Königshofen  | ***						                 | konstantink4120  |
+| Timo Nadolny            | ***                                      | nadolzetimo      |
+| Marcell Wolf de Lêu     | ***                                      | wolfdeleu        |
 
 ---
 
