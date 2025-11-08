@@ -33,11 +33,12 @@ Ein System, das Patientendaten sicher verwaltet, Vitalwerte überwacht und bei k
 
 ## 👥 Team 2 – MediTrack
 
-| Name                    | E-Mail                                   | Discord          |
-|-------------------------|------------------------------------------|------------------|
-| Konstantin Königshofen  | ***						                 | konstantink4120  |
-| Timo Nadolny            | ***                                      | nadolzetimo      |
-| Marcell Wolf de Lêu     | ***                                      | wolfdeleu        |
+| Name                   | E-Mail                                   | Discord         |
+|------------------------|------------------------------------------|-----------------|
+| Konstantin Königshofen | ***						                 | konstantink4120 |
+| Timo Nadolny           | ***                                      | nadolzetimo     |
+| Marcell Wolf de Lêu    | ***                                      | wolfdeleu       |
+| Ferdinand Stadler      | ***                                      | ferdi_29858     |
 
 ---
 
