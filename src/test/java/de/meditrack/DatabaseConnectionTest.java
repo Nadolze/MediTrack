@@ -1,6 +1,6 @@
-package com.example;
+package de.meditrack;
 
-import com.example.meditrack.MediTrackApplication;
+import de.meditrack.meditrack.MediTrackApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
