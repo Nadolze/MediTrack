@@ -3,12 +3,10 @@ pipeline {
     environment {
         APP_NAME = "MediTrack"
         MAVEN_HOME = tool 'Maven 3.9.11'
-        DEPLOY_DIR_LINUX = "/opt/meditrack/main"
-        DEPLOY_DIR_WIN = "C:\\\\meditrack\\\\main"
-        PORT = "9090"
     }
 
     stages {
+
         stage('Clean Workspace') {
             steps {
                 echo "🧹 Lösche alten Workspace..."
@@ -56,34 +54,37 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    echo "🚀 Deployment wird vorbereitet auf Port ${PORT}..."
+                    echo "🚀 Deployment wird vorbereitet..."
+
+                    // Deployment-Port (fest oder dynamisch)
+                    def port = "9090"
+                    echo "🔹 MediTrack wird auf Port ${port} gestartet"
 
                     if (isUnix()) {
-                        // Linux Deployment
+                        // Linux / macOS
                         sh """
-                        mkdir -p ${DEPLOY_DIR_LINUX}
-                        cp target/meditrack-0.0.1-SNAPSHOT.jar ${DEPLOY_DIR_LINUX}/
-                        pkill -f meditrack-0.0.1-SNAPSHOT.jar || true
-                        nohup java -jar ${DEPLOY_DIR_LINUX}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} > ${DEPLOY_DIR_LINUX}/app.log 2>&1 &
-                        echo "🚀 MediTrack wurde auf Port ${PORT} gestartet (Linux detached)."
+                        mkdir -p /opt/meditrack/main
+                        rm -f /opt/meditrack/main/meditrack-*.jar
+                        pkill -f 'meditrack-.*\\.jar' || true
+                        cp target/meditrack-0.0.1-SNAPSHOT.jar /opt/meditrack/main/
+                        nohup java -jar /opt/meditrack/main/meditrack-0.0.1-SNAPSHOT.jar --server.port=${port} > /opt/meditrack/main/app.log 2>&1 &
+                        echo "🚀 MediTrack wurde auf Port ${port} gestartet (Linux detached)."
                         """
                     } else {
-                        // Windows Deployment
+                        // Windows
+                        def deployDir = "C:\\\\meditrack\\\\main"
                         bat """
-                        if not exist "${DEPLOY_DIR_WIN}" mkdir "${DEPLOY_DIR_WIN}"
-                        copy target\\meditrack-0.0.1-SNAPSHOT.jar "${DEPLOY_DIR_WIN}" /Y
-
-                        :: Alte Instanzen stoppen
-                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'meditrack-0.0.1-SNAPSHOT.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
-
-                        cd /d "${DEPLOY_DIR_WIN}"
-
-                        :: Starte MediTrack losgelöst vom Jenkins-Service
-                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT}', 0, \$false) }"
-
-                        echo "🚀 MediTrack wurde via WMI-Detach gestartet (Port ${PORT})"
+                        if not exist "${deployDir}" mkdir "${deployDir}"
+                        del /Q "${deployDir}\\\\meditrack-*.jar"
+                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match 'meditrack-.*\\.jar' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
+                        copy target\\meditrack-0.0.1-SNAPSHOT.jar "${deployDir}" /Y
+                        cd /d "${deployDir}"
+                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}', 0, \$false) }"
+                        echo "🚀 MediTrack wurde via WMI-Detach gestartet (Port ${port})"
                         """
                     }
+
+                    env.ACTIVE_PORT = port
                 }
             }
         }
@@ -91,7 +92,9 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    echo "🔍 Prüfe Erreichbarkeit auf http://localhost:${PORT}"
+                    def port = env.ACTIVE_PORT ?: "9090"
+                    echo "🔍 Prüfe MediTrack auf http://localhost:${port} ..."
+
                     def healthy = false
                     for (int i = 1; i <= 6; i++) {
                         echo "⏳ Versuch ${i}..."
@@ -100,9 +103,9 @@ pipeline {
                         try {
                             def response = ""
                             if (isUnix()) {
-                                response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${PORT}", returnStdout: true).trim()
+                                response = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port}", returnStdout: true).trim()
                             } else {
-                                response = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${PORT} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
+                                response = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing).StatusCode\"", returnStdout: true).trim()
                             }
 
                             echo "ℹ️ HTTP Status: ${response}"
@@ -111,25 +114,24 @@ pipeline {
                                 break
                             }
                         } catch (err) {
-                            echo "⚠️ Keine Antwort erhalten, warte kurz..."
+                            echo "⚠️ Keine Antwort von MediTrack auf Port ${port}, warte kurz..."
                         }
                     }
 
                     if (!healthy) {
-                        error "❌ Health Check fehlgeschlagen – MediTrack antwortet nicht auf Port ${PORT}"
+                        error "❌ Health Check fehlgeschlagen – MediTrack antwortet nicht auf Port ${port}"
                     } else {
-                        echo "✅ Anwendung läuft stabil auf Port ${PORT}."
-                        echo "🔗 Öffne: http://localhost:${PORT}"
+                        echo "✅ MediTrack läuft stabil auf Port ${port}."
                     }
                 }
             }
         }
+
     }
 
     post {
         success {
             echo "🎉 Build, Test und Deployment erfolgreich abgeschlossen."
-            echo "💡 Windows Start: java -jar C:\\meditrack\\main\\meditrack-0.0.1-SNAPSHOT.jar --server.port=9090"
         }
         failure {
             echo "❌ Build oder Deployment fehlgeschlagen."
