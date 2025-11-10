@@ -1,58 +1,65 @@
 pipeline {
     agent any
-
     environment {
-        DEPLOY_DIR = "/opt/meditrack/main"
+        APP_DIR = "/opt/meditrack/main"
         JAR_NAME = "meditrack-0.0.1-SNAPSHOT.jar"
-        MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
+        SERVICE_NAME = "meditrack"
     }
-
     stages {
-        stage('Clean Old Processes & Files') {
+        stage('Stop old service') {
             steps {
-                echo "🔧 Stoppe alte Meditrack-Instanzen und lösche Deploy-Verzeichnis..."
-                sh """
-                sudo pkill -f ${JAR_NAME} || true
-                sudo rm -rf ${DEPLOY_DIR}/*
-                """
+                echo "🔧 Stopping old Meditrack service (if running)..."
+                sh "sudo systemctl stop ${SERVICE_NAME} || true"
             }
         }
 
-        stage('Checkout Code') {
+        stage('Clean Workspace') {
             steps {
-                echo "📦 Checkout aus Git..."
-                deleteDir() // Workspace komplett löschen
-                git branch: 'main',
-                    url: 'https://github.com/Nadolze/MediTrack.git',
-                    credentialsId: 'github-creds'
+                echo "🧹 Cleaning workspace..."
+                deleteDir()
             }
         }
 
-        stage('Build with Maven') {
+        stage('Checkout') {
             steps {
-                echo "🔧 Starte Maven Build..."
-                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                echo "📦 Checkout code from Git..."
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "🔧 Building JAR with Maven..."
+                sh "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11/bin/mvn clean package -DskipTests"
+                sh "test -f target/${JAR_NAME}"
             }
         }
 
         stage('Deploy') {
             steps {
-                echo "🚀 Deployment auf Server..."
-                sh """
-                sudo rm -f ${DEPLOY_DIR}/*.jar
-                sudo cp target/${JAR_NAME} ${DEPLOY_DIR}/
-                sudo nohup java -jar ${DEPLOY_DIR}/${JAR_NAME} --server.port=9090 > ${DEPLOY_DIR}/app.log 2>&1 &
-                """
+                echo "🚀 Deploying JAR to ${APP_DIR}..."
+                sh "sudo rm -f ${APP_DIR}/${JAR_NAME}"
+                sh "sudo cp target/${JAR_NAME} ${APP_DIR}/"
+            }
+        }
+
+        stage('Restart service') {
+            steps {
+                echo "🔁 Restarting systemd service..."
+                sh "sudo systemctl daemon-reload"
+                sh "sudo systemctl enable ${SERVICE_NAME}"
+                sh "sudo systemctl restart ${SERVICE_NAME}"
+                sh "sudo systemctl status ${SERVICE_NAME} --no-pager"
             }
         }
     }
 
     post {
         success {
-            echo "✅ Build und Deployment erfolgreich. Meditrack läuft auf Port 9090."
+            echo "✅ Deployment completed successfully!"
         }
         failure {
-            echo "❌ Build oder Deployment fehlgeschlagen. Log prüfen."
+            echo "❌ Deployment failed!"
         }
     }
 }
