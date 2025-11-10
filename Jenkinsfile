@@ -6,7 +6,7 @@ pipeline {
         JAR_NAME = "meditrack-0.0.1-SNAPSHOT.jar"
         DEPLOY_DIR_UNIX = "/opt/meditrack/main"
         DEPLOY_DIR_WIN = "C:\\\\meditrack\\\\main"
-        PORT = "9090"
+
     }
 
     stages {
@@ -77,44 +77,52 @@ pipeline {
             }
         }
 
-        stage('Deploy (detached)') {
-            steps {
-                script {
-                    echo "🚀 Deployment: kopieren, alte JAR entfernen, detached starten (Port ${PORT})"
+        stage('Deploy') {
+                    steps {
+                        echo "🚀 Starte Deployment..."
+                        script {
+                            // Port pro Branch (z. B. main=9090, dev=9091, feature=9092)
+                            def branchPort = [
+                                'main': 9090,
+                                'dev': 9091,
+                                'staging': 9092
+                            ][env.BRANCH_NAME] ?: 9099
 
-                    if (isUnix()) {
-                        sh """
-                        set -e
-                        mkdir -p ${DEPLOY_DIR_UNIX}
-                        # Entferne alte JARs und alte Dateien
-                        rm -f ${DEPLOY_DIR_UNIX}/meditrack-*.jar || true
-                        # Stoppe eventuell laufende Instanzen nochmals
-                        pkill -f '${JAR_NAME}' || true
-                        # Kopiere neues JAR
-                        cp target/${JAR_NAME} ${DEPLOY_DIR_UNIX}/
-                        chmod 755 ${DEPLOY_DIR_UNIX}/${JAR_NAME} || true
-                        # Starte detached (nohup) — losgelöst vom Jenkins-Job
-                        nohup java -jar ${DEPLOY_DIR_UNIX}/${JAR_NAME} --server.port=${PORT} > ${DEPLOY_DIR_UNIX}/app.log 2>&1 &
-                        echo "✅ Neuer Prozess gestartet (detached)."
-                        """
-                    } else {
-                        // Windows: Deploy + WMI/COM-Detach
-                        bat """
-                        if not exist "${DEPLOY_DIR_WIN}" mkdir "${DEPLOY_DIR_WIN}"
-                        del /Q "${DEPLOY_DIR_WIN}\\\\meditrack-*.jar" || echo "Keine alten JARs"
-                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match '${JAR_NAME}' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
-                        copy /Y target\\${JAR_NAME} "${DEPLOY_DIR_WIN}"
-                        cd /d "${DEPLOY_DIR_WIN}"
-                        powershell -NoProfile -Command "& { (New-Object -ComObject WScript.Shell).Run('java -jar ${JAR_NAME} --server.port=${PORT}', 0, \$false) }"
-                        echo "✅ Neuer Windows-Prozess gestartet (detached)."
-                        """
+                            echo "🌐 Branch ${env.BRANCH_NAME} → Port ${branchPort}"
+
+                            if (isUnix()) {
+                                sh """
+                                set -e
+                                sudo mkdir -p ${DEPLOY_BASE}/${env.BRANCH_NAME}
+
+                                echo "🔧 Stoppe alte Instanz (falls vorhanden)..."
+                                sudo pkill -f "${JAR_NAME}" || true
+
+                                echo "📦 Kopiere neue Version..."
+                                sudo cp target/${JAR_NAME} ${DEPLOY_BASE}/${env.BRANCH_NAME}/
+
+                                echo "🚀 Starte neue Instanz..."
+                                nohup java -Xmx256m -jar ${DEPLOY_BASE}/${env.BRANCH_NAME}/${JAR_NAME} --server.port=${branchPort} > ${DEPLOY_BASE}/${env.BRANCH_NAME}/app.log 2>&1 &
+                                """
+                            } else {
+                                bat """
+                                echo Stoppe alte Instanz...
+                                for /f "tokens=5" %%p in ('netstat -aon ^| find "9090" ^| find "LISTENING"') do taskkill /PID %%p /F >nul 2>&1
+
+                                echo Kopiere neue Version...
+                                if not exist "%DEPLOY_BASE%\\${env.BRANCH_NAME}" mkdir "%DEPLOY_BASE%\\${env.BRANCH_NAME}"
+                                copy target\\${JAR_NAME} "%DEPLOY_BASE%\\${env.BRANCH_NAME}\\${JAR_NAME}" /Y
+
+                                echo Starte neue Instanz...
+                                start /b java -Xmx256m -jar "%DEPLOY_BASE%\\${env.BRANCH_NAME}\\${JAR_NAME}" --server.port=${branchPort}
+                                """
+                            }
+
+                            echo "✅ Deployment abgeschlossen. App läuft auf Port ${branchPort}"
+                        }
                     }
-
-                    // setze ACTIVE_PORT für Health-Check
-                    env.ACTIVE_PORT = PORT
                 }
             }
-        }
 
         stage('Health Check') {
             steps {
