@@ -1,97 +1,96 @@
 pipeline {
     agent any
     environment {
-        BRANCH_DEPLOY_DIR = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME}" : "C:\\MediTrack\\${env.BRANCH_NAME}"
-        PORT_OFFSET = BRANCH_PORT_OFFSET[env.BRANCH_NAME] ?: 2
-        SERVER_PORT = 9090 + PORT_OFFSET
+        // Statische Basiswerte
+        BASE_LINUX_DIR = '/opt/meditrack'
+        BASE_WIN_DIR   = 'C:\\MediTrack'
+        BASE_PORT      = '9090'
+        MAVEN_HOME    = '/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11'
     }
     stages {
-        stage('Clean & Stop Old Instances') {
+        stage('Prepare Environment') {
+            steps {
+                script {
+                    // Branch-spezifisches Deploy-Verzeichnis
+                    env.BRANCH_DEPLOY_DIR = isUnix() ? "${BASE_LINUX_DIR}/${env.BRANCH_NAME}" : "${BASE_WIN_DIR}\\${env.BRANCH_NAME}"
+
+                    // Branch-Port-Zuweisung (Offset)
+                    def portOffsetMap = [ 'main':0, 'develop':1 ]
+                    def offset = portOffsetMap[env.BRANCH_NAME] ?: 2
+                    env.SERVER_PORT = (BASE_PORT.toInteger() + offset).toString()
+
+                    echo "Deploy Dir: ${env.BRANCH_DEPLOY_DIR}"
+                    echo "Server Port: ${env.SERVER_PORT}"
+                }
+            }
+        }
+
+        stage('Stop Old Instances & Clean') {
             steps {
                 script {
                     if (isUnix()) {
                         sh """
-                            echo "🔧 Stoppe alte Instanzen..."
-                            pkill -f "${BRANCH_DEPLOY_DIR}/meditrack-*.jar" || true
-                            rm -rf ${BRANCH_DEPLOY_DIR}/*
-                            mkdir -p ${BRANCH_DEPLOY_DIR}
+                            pkill -f "${env.BRANCH_DEPLOY_DIR}/meditrack-*.jar" || true
+                            rm -rf ${env.BRANCH_DEPLOY_DIR}/*
+                            mkdir -p ${env.BRANCH_DEPLOY_DIR}
                         """
                     } else {
                         bat """
-                            echo Stoppe alte Instanzen...
                             taskkill /F /IM meditrack-*.jar || echo Kein Prozess
-                            if exist "${BRANCH_DEPLOY_DIR}" rmdir /S /Q "${BRANCH_DEPLOY_DIR}"
-                            mkdir "${BRANCH_DEPLOY_DIR}"
+                            if exist "${env.BRANCH_DEPLOY_DIR}" rmdir /S /Q "${env.BRANCH_DEPLOY_DIR}"
+                            mkdir "${env.BRANCH_DEPLOY_DIR}"
                         """
                     }
                 }
             }
         }
 
-        stage('Checkout') {
-            steps { checkout scm }
+        stage('Checkout Code') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: env.BRANCH_NAME]],
+                          userRemoteConfigs: [[url: 'https://github.com/Nadolze/MediTrack.git',
+                                               credentialsId: 'github-creds']]])
+            }
         }
 
         stage('Build') {
             steps {
                 script {
                     if (isUnix()) {
-                        sh "mvn clean package -DskipTests"
-                        sh "cp target/meditrack-*.jar ${BRANCH_DEPLOY_DIR}/"
+                        sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
                     } else {
-                        bat "mvn clean package -DskipTests"
-                        bat "copy target\\meditrack-*.jar ${BRANCH_DEPLOY_DIR}\\"
+                        bat "\"${MAVEN_HOME}\\bin\\mvn\" clean package -DskipTests"
                     }
                 }
             }
         }
 
-        stage('Deploy Service') {
+        stage('Deploy & Start Server') {
             steps {
                 script {
+                    def jarName = "meditrack-0.0.1-SNAPSHOT.jar"
                     if (isUnix()) {
                         sh """
-                            JAR_FILE=\$(ls ${BRANCH_DEPLOY_DIR}/meditrack-*.jar)
-                            SERVICE_FILE="/etc/systemd/system/meditrack-${env.BRANCH_NAME}.service"
-
-                            # Alte Service-Datei löschen
-                            sudo systemctl stop meditrack-${env.BRANCH_NAME} || true
-                            sudo systemctl disable meditrack-${env.BRANCH_NAME} || true
-                            sudo rm -f \${SERVICE_FILE}
-
-                            # Neue Service-Datei erstellen
-                            cat <<EOF | sudo tee \${SERVICE_FILE}
-[Unit]
-Description=MediTrack Spring Boot - Branch ${env.BRANCH_NAME}
-After=network.target
-
-[Service]
-User=jenkins
-WorkingDirectory=${BRANCH_DEPLOY_DIR}
-ExecStart=/usr/bin/java -jar \${JAR_FILE} --server.port=${SERVER_PORT}
-SuccessExitStatus=143
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-                            sudo systemctl daemon-reload
-                            sudo systemctl enable meditrack-${env.BRANCH_NAME}.service
-                            sudo systemctl restart meditrack-${env.BRANCH_NAME}.service
+                            cp target/${jarName} ${env.BRANCH_DEPLOY_DIR}/
+                            nohup java -jar ${env.BRANCH_DEPLOY_DIR}/${jarName} --server.port=${env.SERVER_PORT} > ${env.BRANCH_DEPLOY_DIR}/app.log 2>&1 &
                         """
                     } else {
                         bat """
-                            set JAR_FILE=${BRANCH_DEPLOY_DIR}\\meditrack-*.jar
-                            nssm stop MediTrack-${env.BRANCH_NAME} || echo Kein laufender Service
-                            nssm remove MediTrack-${env.BRANCH_NAME} confirm
-                            nssm install MediTrack-${env.BRANCH_NAME} "java" "-jar %JAR_FILE% --server.port=${SERVER_PORT}"
-                            nssm start MediTrack-${env.BRANCH_NAME}
+                            copy target\\${jarName} "${env.BRANCH_DEPLOY_DIR}\\"
+                            start /B java -jar "${env.BRANCH_DEPLOY_DIR}\\${jarName}" --server.port=${env.SERVER_PORT} > "${env.BRANCH_DEPLOY_DIR}\\app.log" 2>&1
                         """
                     }
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Build & Deployment erfolgreich: Branch ${env.BRANCH_NAME} auf Port ${env.SERVER_PORT}"
+        }
+        failure {
+            echo "❌ Build oder Deployment fehlgeschlagen für Branch ${env.BRANCH_NAME}"
         }
     }
 }
