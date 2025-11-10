@@ -1,65 +1,97 @@
 pipeline {
     agent any
     environment {
-        APP_DIR = "/opt/meditrack/main"
-        JAR_NAME = "meditrack-0.0.1-SNAPSHOT.jar"
-        SERVICE_NAME = "meditrack"
+        BRANCH_DEPLOY_DIR = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME}" : "C:\\MediTrack\\${env.BRANCH_NAME}"
+        PORT_OFFSET = BRANCH_PORT_OFFSET[env.BRANCH_NAME] ?: 2
+        SERVER_PORT = 9090 + PORT_OFFSET
     }
     stages {
-        stage('Stop old service') {
+        stage('Clean & Stop Old Instances') {
             steps {
-                echo "🔧 Stopping old Meditrack service (if running)..."
-                sh "sudo systemctl stop ${SERVICE_NAME} || true"
-            }
-        }
-
-        stage('Clean Workspace') {
-            steps {
-                echo "🧹 Cleaning workspace..."
-                deleteDir()
+                script {
+                    if (isUnix()) {
+                        sh """
+                            echo "🔧 Stoppe alte Instanzen..."
+                            pkill -f "${BRANCH_DEPLOY_DIR}/meditrack-*.jar" || true
+                            rm -rf ${BRANCH_DEPLOY_DIR}/*
+                            mkdir -p ${BRANCH_DEPLOY_DIR}
+                        """
+                    } else {
+                        bat """
+                            echo Stoppe alte Instanzen...
+                            taskkill /F /IM meditrack-*.jar || echo Kein Prozess
+                            if exist "${BRANCH_DEPLOY_DIR}" rmdir /S /Q "${BRANCH_DEPLOY_DIR}"
+                            mkdir "${BRANCH_DEPLOY_DIR}"
+                        """
+                    }
+                }
             }
         }
 
         stage('Checkout') {
-            steps {
-                echo "📦 Checkout code from Git..."
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Build') {
             steps {
-                echo "🔧 Building JAR with Maven..."
-                sh "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11/bin/mvn clean package -DskipTests"
-                sh "test -f target/${JAR_NAME}"
+                script {
+                    if (isUnix()) {
+                        sh "mvn clean package -DskipTests"
+                        sh "cp target/meditrack-*.jar ${BRANCH_DEPLOY_DIR}/"
+                    } else {
+                        bat "mvn clean package -DskipTests"
+                        bat "copy target\\meditrack-*.jar ${BRANCH_DEPLOY_DIR}\\"
+                    }
+                }
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Service') {
             steps {
-                echo "🚀 Deploying JAR to ${APP_DIR}..."
-                sh "sudo rm -f ${APP_DIR}/${JAR_NAME}"
-                sh "sudo cp target/${JAR_NAME} ${APP_DIR}/"
-            }
-        }
+                script {
+                    if (isUnix()) {
+                        sh """
+                            JAR_FILE=\$(ls ${BRANCH_DEPLOY_DIR}/meditrack-*.jar)
+                            SERVICE_FILE="/etc/systemd/system/meditrack-${env.BRANCH_NAME}.service"
 
-        stage('Restart service') {
-            steps {
-                echo "🔁 Restarting systemd service..."
-                sh "sudo systemctl daemon-reload"
-                sh "sudo systemctl enable ${SERVICE_NAME}"
-                sh "sudo systemctl restart ${SERVICE_NAME}"
-                sh "sudo systemctl status ${SERVICE_NAME} --no-pager"
-            }
-        }
-    }
+                            # Alte Service-Datei löschen
+                            sudo systemctl stop meditrack-${env.BRANCH_NAME} || true
+                            sudo systemctl disable meditrack-${env.BRANCH_NAME} || true
+                            sudo rm -f \${SERVICE_FILE}
 
-    post {
-        success {
-            echo "✅ Deployment completed successfully!"
-        }
-        failure {
-            echo "❌ Deployment failed!"
+                            # Neue Service-Datei erstellen
+                            cat <<EOF | sudo tee \${SERVICE_FILE}
+[Unit]
+Description=MediTrack Spring Boot - Branch ${env.BRANCH_NAME}
+After=network.target
+
+[Service]
+User=jenkins
+WorkingDirectory=${BRANCH_DEPLOY_DIR}
+ExecStart=/usr/bin/java -jar \${JAR_FILE} --server.port=${SERVER_PORT}
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+                            sudo systemctl daemon-reload
+                            sudo systemctl enable meditrack-${env.BRANCH_NAME}.service
+                            sudo systemctl restart meditrack-${env.BRANCH_NAME}.service
+                        """
+                    } else {
+                        bat """
+                            set JAR_FILE=${BRANCH_DEPLOY_DIR}\\meditrack-*.jar
+                            nssm stop MediTrack-${env.BRANCH_NAME} || echo Kein laufender Service
+                            nssm remove MediTrack-${env.BRANCH_NAME} confirm
+                            nssm install MediTrack-${env.BRANCH_NAME} "java" "-jar %JAR_FILE% --server.port=${SERVER_PORT}"
+                            nssm start MediTrack-${env.BRANCH_NAME}
+                        """
+                    }
+                }
+            }
         }
     }
 }
