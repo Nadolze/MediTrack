@@ -1,23 +1,28 @@
 pipeline {
     agent any
 
-    environment {
-        DEPLOY_DIR = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME}" : "C:\\MediTrack\\${env.BRANCH_NAME}"
-        SERVER_PORT = env.BRANCH_NAME == 'main' ? 9090 : 9090 + (env.BRANCH_NAME.hashCode().abs() % 100)
-        MAVEN_HOME = isUnix() ? "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11" : "C:\\Maven"
-    }
-
     stages {
-        stage('Checkout') {
+        stage('Setup') {
             steps {
-                checkout scm
+                script {
+                    DEPLOY_DIR = isUnix() ? "/opt/meditrack/${env.BRANCH_NAME}" : "C:\\MediTrack\\${env.BRANCH_NAME}"
+                    SERVER_PORT = env.BRANCH_NAME == 'main' ? 9090 : 9090 + (env.BRANCH_NAME.hashCode().abs() % 100)
+                    MAVEN_HOME = isUnix() ? "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11" : "C:\\Maven"
+
+                    echo "Branch: ${env.BRANCH_NAME}"
+                    echo "Deploy dir: ${DEPLOY_DIR}"
+                    echo "Server Port: ${SERVER_PORT}"
+                    echo "Maven Home: ${MAVEN_HOME}"
+                }
             }
         }
 
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
         stage('Clean Workspace') {
-            steps {
-                deleteDir()
-            }
+            steps { deleteDir() }
         }
 
         stage('Build') {
@@ -58,12 +63,11 @@ pipeline {
                         sudo systemctl start meditrack@${env.BRANCH_NAME}.service
                         """
                     } else {
-                        // Windows Deployment: kopiere JAR, starte als Windows Service
                         bat """
                         if exist ${DEPLOY_DIR} rmdir /S /Q ${DEPLOY_DIR}
                         mkdir ${DEPLOY_DIR}
                         copy target\\meditrack-0.0.1-SNAPSHOT.jar ${DEPLOY_DIR}\\
-                        REM Hier kann ein Windows Service-Skript oder NSSM verwendet werden
+                        REM Windows Service hier starten (z.B. mit NSSM)
                         """
                     }
                 }
@@ -72,11 +76,7 @@ pipeline {
     }
 
     post {
-        success {
-            echo "✅ Branch ${env.BRANCH_NAME} erfolgreich deployed auf Port ${SERVER_PORT}"
-        }
-        failure {
-            echo "❌ Deployment fehlgeschlagen für Branch ${env.BRANCH_NAME}"
-        }
+        success { echo "✅ Branch ${env.BRANCH_NAME} deployed auf Port ${SERVER_PORT}" }
+        failure { echo "❌ Deployment fehlgeschlagen für Branch ${env.BRANCH_NAME}" }
     }
 }
