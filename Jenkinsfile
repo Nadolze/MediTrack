@@ -1,47 +1,38 @@
 pipeline {
     agent any
-
+    environment {
+        MAVEN_HOME = isUnix() ? "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11" : "C:\\Maven"
+        BASE_DEPLOY_DIR = isUnix() ? "/opt/meditrack" : "C:\\MediTrack"
+        MAIN_PORT = 9090
+        START_PORT = 9091
+    }
     stages {
-
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
 
         stage('Clean Workspace') {
             steps {
-                echo "Cleaning workspace AFTER checkout"
-                deleteDir()
-            }
-        }
-
-        stage('Checkout') {
-                    steps {
-                        echo "Checking out branch ${env.BRANCH_NAME}"
-                        checkout scm
+                script {
+                    // Lösche nur alte Build-Artefakte, Repo bleibt
+                    if (isUnix()) {
+                        sh "rm -rf target"
+                        sh "mkdir -p ${BASE_DEPLOY_DIR}/${env.BRANCH_NAME}"
+                    } else {
+                        bat "rmdir /s /q target"
+                        bat "mkdir ${BASE_DEPLOY_DIR}\\${env.BRANCH_NAME}"
                     }
                 }
-
-        stage('Setup Environment') {
-            steps {
-                script {
-                    // OS-spezifische Pfade
-                    MAVEN_HOME = isUnix() ? "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11" : "C:\\Maven"
-                    BASE_DEPLOY_DIR = isUnix() ? "/opt/meditrack" : "C:\\MediTrack"
-
-                    BRANCH = env.BRANCH_NAME
-                    DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
-
-                    // Port bestimmen
-                    SERVER_PORT = (BRANCH == 'main') ? 9090 : findFreePort()
-
-                    echo "Branch: ${BRANCH}"
-                    echo "Deploy dir: ${DEPLOY_DIR}"
-                    echo "Server Port: ${SERVER_PORT}"
-                    echo "Maven Home: ${MAVEN_HOME}"
-                }
             }
         }
+
 
         stage('Build') {
             steps {
                 script {
+                    def branch = env.BRANCH_NAME
                     sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
                 }
             }
@@ -50,39 +41,53 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    sh "mkdir -p ${DEPLOY_DIR}"
-                    sh "cp target/meditrack-0.0.1-SNAPSHOT.jar ${DEPLOY_DIR}/"
+                    def branch = env.BRANCH_NAME
+                    def port = branch == 'main' ? MAIN_PORT : findFreePort(START_PORT)
+                    def deployDir = "${BASE_DEPLOY_DIR}/${branch}"
+                    sh "cp target/meditrack-*.jar ${deployDir}/"
 
-                    SERVICE_FILE = "/etc/systemd/system/meditrack-${BRANCH}.service"
-                    sh """
-                    echo '[Unit]
-                    Description=MediTrack Spring Boot Application for ${BRANCH}
-                    After=network.target
+                    if (isUnix()) {
+                        def serviceFile = "/etc/systemd/system/meditrack-${branch}.service"
+                        sh """
+                        echo '[Unit]
+                        Description=MediTrack Spring Boot Application for ${branch}
+                        After=network.target
 
-                    [Service]
-                    User=jenkins
-                    ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
-                    Restart=always
+                        [Service]
+                        User=jenkins
+                        ExecStart=/usr/bin/java -jar ${deployDir}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}
+                        Restart=always
 
-                    [Install]
-                    WantedBy=multi-user.target' | sudo tee ${SERVICE_FILE}
-                    """
+                        [Install]
+                        WantedBy=multi-user.target' | sudo tee ${serviceFile}
 
-                    sh "sudo systemctl daemon-reload"
-                    sh "sudo systemctl enable meditrack-${BRANCH}.service"
-                    sh "sudo systemctl restart meditrack-${BRANCH}.service"
+                        sudo systemctl daemon-reload
+                        sudo systemctl enable meditrack-${branch}.service
+                        sudo systemctl restart meditrack-${branch}.service
+                        """
+                    } else {
+                        // Windows: nssm Service erstellen oder restarten
+                        bat """
+                        nssm install MediTrack-${branch} ${MAVEN_HOME}\\bin\\java.exe -jar ${deployDir}\\meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}
+                        nssm start MediTrack-${branch}
+                        """
+                    }
                 }
             }
         }
     }
 }
 
-// Hilfsfunktion zum freien Port (Unix only)
-def findFreePort() {
-    def port = 9100
+// Hilfsfunktion zum Finden eines freien Ports
+def findFreePort(startPort) {
+    def port = startPort
     while (true) {
-        def isFree = sh(script: "ss -tln | grep -q ':${port}' || echo free", returnStdout: true).trim()
-        if (isFree == 'free') return port
-        port += 1
+        try {
+            def socket = new ServerSocket(port)
+            socket.close()
+            return port
+        } catch (Exception e) {
+            port++
+        }
     }
 }
