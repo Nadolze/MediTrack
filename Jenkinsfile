@@ -54,41 +54,37 @@ pipeline {
         }
 
         stage('Deploy') {
-                    steps {
-                        script {
-                            def branch = env.BRANCH_NAME
-                            def deployDir = "${BASE_DEPLOY_DIR}/${branch}"
-                            def jarFile = "target/meditrack-0.0.1-SNAPSHOT.jar"
+            steps {
+                script {
+                    if (isUnix()) {
+                        sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+                        sh """
+                        cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH}.service
+                        [Unit]
+                        Description=MediTrack Spring Boot Application for ${BRANCH}
+                        After=network.target
 
-                            // Portzuweisung: main = 9090, alle anderen freie Ports
-                            def port = (branch == 'main') ? 9090 : 9000 + Math.abs(branch.hashCode() % 1000)
+                        [Service]
+                        User=jenkins
+                        ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
+                        Restart=always
 
-                            sh "cp ${jarFile} ${deployDir}/"
-
-                            def serviceFile = "/etc/systemd/system/meditrack-${branch}.service"
-
-                            sh """
-                            echo "[Unit]
-                            Description=MediTrack Spring Boot Application for ${branch}
-                            After=network.target
-
-                            [Service]
-                            User=jenkins
-                            ExecStart=/usr/bin/java -jar ${deployDir}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}
-                            Restart=always
-
-                            [Install]
-                            WantedBy=multi-user.target" | sudo tee ${serviceFile}
-                            """
-
-                            sh "sudo systemctl daemon-reload"
-                            sh "sudo systemctl enable meditrack-${branch}.service"
-                            sh "sudo systemctl restart meditrack-${branch}.service"
-
-                            echo "✅ Deployed branch ${branch} on port ${port}"
-                        }
+                        [Install]
+                        WantedBy=multi-user.target
+                        EOF
+                        """
+                        sh "sudo systemctl daemon-reload"
+                        sh "sudo systemctl enable meditrack-${BRANCH}.service"
+                        sh "sudo systemctl restart meditrack-${BRANCH}.service"
+                    } else {
+                        bat "copy target\\meditrack-*.jar ${DEPLOY_DIR}\\"
+                        echo "Windows Service für Branch ${BRANCH} auf Port ${SERVER_PORT} erstellen (z.B. mit NSSM)"
                     }
+
+                    echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
                 }
+            }
+        }
     }
 }
 
