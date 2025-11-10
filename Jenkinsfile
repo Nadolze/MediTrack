@@ -1,30 +1,46 @@
 pipeline {
     agent any
 
-    environment {
-        BASE_DEPLOY_DIR = isUnix() ? "/opt/meditrack" : "C:\\MediTrack"
-        MAVEN_HOME = isUnix() ? "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11" : "C:\\Maven"
-    }
-
     stages {
-        stage('Clean Build Artifacts') {
-            steps {
-                script {
-                    // Nur alte Build-Artefakte löschen, Repository bleibt
-                    if (isUnix()) {
-                        sh "rm -rf target"
-                    } else {
-                        bat "rmdir /s /q target"
-                    }
-                    sh "mkdir -p ${BASE_DEPLOY_DIR}/${env.BRANCH_NAME}"
-                }
-            }
-        }
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+
+        stage('Setup Environment') {
+            steps {
+                script {
+                    // OS-abhängige Variablen
+                    def isUnix = isUnix()
+                    MAVEN_HOME = isUnix ? "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11" : "C:\\Maven"
+                    BASE_DEPLOY_DIR = isUnix ? "/opt/meditrack" : "C:\\MediTrack"
+                    BRANCH = env.BRANCH_NAME
+                    DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
+                    SERVER_PORT = (BRANCH == 'main') ? 9090 : findFreePort()
+
+                    echo "Branch: ${BRANCH}"
+                    echo "Deploy dir: ${DEPLOY_DIR}"
+                    echo "Server Port: ${SERVER_PORT}"
+                    echo "Maven Home: ${MAVEN_HOME}"
+                }
+            }
+        }
+
+        stage('Clean Build Artifacts') {
+            steps {
+                script {
+                    // Nur alte Build-Artefakte löschen, Repo bleibt erhalten
+                    if (isUnix()) {
+                        sh "rm -rf target"
+                    } else {
+                        bat "rmdir /s /q target"
+                    }
+                    sh "mkdir -p ${DEPLOY_DIR}"
+                }
+            }
+        }
+
         stage('Build') {
             steps {
                 script {
@@ -40,20 +56,17 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    def port = env.BRANCH_NAME == 'main' ? 9090 : findFreePort()
-                    def deployDir = "${BASE_DEPLOY_DIR}/${env.BRANCH_NAME}"
-
                     if (isUnix()) {
-                        sh "cp target/meditrack-*.jar ${deployDir}/"
+                        sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
                         sh """
-                        cat <<EOF | sudo tee /etc/systemd/system/meditrack-${env.BRANCH_NAME}.service
+                        cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH}.service
                         [Unit]
-                        Description=MediTrack Spring Boot Application for ${env.BRANCH_NAME}
+                        Description=MediTrack Spring Boot Application for ${BRANCH}
                         After=network.target
 
                         [Service]
                         User=jenkins
-                        ExecStart=/usr/bin/java -jar ${deployDir}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${port}
+                        ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
                         Restart=always
 
                         [Install]
@@ -61,15 +74,14 @@ pipeline {
                         EOF
                         """
                         sh "sudo systemctl daemon-reload"
-                        sh "sudo systemctl enable meditrack-${env.BRANCH_NAME}.service"
-                        sh "sudo systemctl restart meditrack-${env.BRANCH_NAME}.service"
+                        sh "sudo systemctl enable meditrack-${BRANCH}.service"
+                        sh "sudo systemctl restart meditrack-${BRANCH}.service"
                     } else {
-                        bat "copy target\\meditrack-*.jar ${deployDir}\\"
-                        // Windows Service erzeugen z.B. mit NSSM oder PowerShell
-                        echo "Hier Windows Service erstellen (z.B. mit NSSM) für Branch ${env.BRANCH_NAME} auf Port ${port}"
+                        bat "copy target\\meditrack-*.jar ${DEPLOY_DIR}\\"
+                        echo "Windows Service für Branch ${BRANCH} auf Port ${SERVER_PORT} erstellen (z.B. mit NSSM)"
                     }
 
-                    echo "✅ Deployed branch ${env.BRANCH_NAME} on port ${port}"
+                    echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
                 }
             }
         }
