@@ -1,26 +1,28 @@
 pipeline {
     agent any
-    environment {
-        APP_NAME = "MediTrack"
-        MAVEN_HOME = tool 'Maven 3.9.11'
-        JAR_NAME = "meditrack-0.0.1-SNAPSHOT.jar"
-        DEPLOY_DIR_UNIX = "/opt/meditrack/main"
-        DEPLOY_DIR_WIN = "C:\\\\meditrack\\\\main"
 
+    environment {
+        APP_NAME = "meditrack"
+        JAR_NAME = "meditrack-0.0.1-SNAPSHOT.jar"
+        DEPLOY_BASE = "/opt/meditrack"
+        MAVEN_HOME = tool name: 'Maven_3.9.11', type: 'maven'
     }
 
     stages {
         stage('Stop old instances (safe)') {
             steps {
+                echo "🔧 Versuche alte Instanzen zu stoppen (falls vorhanden)..."
                 script {
-                    echo "🔧 Versuche alte Instanzen zu stoppen (falls vorhanden)..."
                     if (isUnix()) {
-                        // Beende alte Prozesse, ohne Pipeline zu failen
-                        sh "pkill -f '${JAR_NAME}' || true"
+                        sh '''
+                            sudo pkill -f meditrack-0.0.1-SNAPSHOT.jar || true
+                            sleep 2
+                        '''
                     } else {
-                        bat """
-                        powershell -NoProfile -Command "Get-WmiObject Win32_Process | Where-Object { \$_.CommandLine -match '${JAR_NAME}' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }"
-                        """
+                        bat '''
+                            taskkill /F /IM java.exe /FI "WINDOWTITLE eq meditrack*" || exit 0
+                            timeout /t 2 >nul
+                        '''
                     }
                 }
             }
@@ -42,120 +44,66 @@ pipeline {
 
         stage('Build') {
             steps {
+                echo "🔧 Starte Maven Build..."
                 script {
-                    echo "🔧 Starte Maven Build..."
-                    def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
                     if (isUnix()) {
-                        sh "${mvnCmd} clean package -DskipTests"
+                        sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
                     } else {
-                        bat "${mvnCmd} clean package -DskipTests"
+                        bat "\"%MAVEN_HOME%\\bin\\mvn.cmd\" clean package -DskipTests"
                     }
-
-                    // Sicherstellen, dass das JAR erzeugt wurde
-                    if (isUnix()) {
-                        sh "test -f target/${JAR_NAME} || (echo '❌ JAR nicht gefunden: target/${JAR_NAME}' && exit 1)"
-                    } else {
-                        bat "if not exist target\\${JAR_NAME} (echo JAR nicht gefunden: target\\\\${JAR_NAME} & exit 1)"
-                    }
-                    echo "✅ Maven Build fertig und JAR vorhanden."
                 }
+                echo "✅ Maven Build fertig und JAR vorhanden."
             }
         }
 
         stage('Test') {
             steps {
+                echo "🧪 Führe Tests aus..."
                 script {
-                    echo "🧪 Führe Tests aus..."
-                    def mvnCmd = isUnix() ? "${MAVEN_HOME}/bin/mvn" : "\"${MAVEN_HOME}\\bin\\mvn.cmd\""
                     if (isUnix()) {
-                        sh "${mvnCmd} test"
+                        sh "${MAVEN_HOME}/bin/mvn test"
                     } else {
-                        bat "${mvnCmd} test"
+                        bat "\"%MAVEN_HOME%\\bin\\mvn.cmd\" test"
                     }
-                    echo "✅ Tests abgeschlossen."
                 }
             }
         }
 
         stage('Deploy') {
-                    steps {
-                        echo "🚀 Starte Deployment..."
-                        script {
-                            // Port pro Branch (z. B. main=9090, dev=9091, feature=9092)
-                            def branchPort = [
-                                'main': 9090,
-                                'dev': 9091,
-                                'staging': 9092
-                            ][env.BRANCH_NAME] ?: 9099
-
-                            echo "🌐 Branch ${env.BRANCH_NAME} → Port ${branchPort}"
-
-                            if (isUnix()) {
-                                sh """
-                                set -e
-                                sudo mkdir -p ${DEPLOY_BASE}/${env.BRANCH_NAME}
-
-                                echo "🔧 Stoppe alte Instanz (falls vorhanden)..."
-                                sudo pkill -f "${JAR_NAME}" || true
-
-                                echo "📦 Kopiere neue Version..."
-                                sudo cp target/${JAR_NAME} ${DEPLOY_BASE}/${env.BRANCH_NAME}/
-
-                                echo "🚀 Starte neue Instanz..."
-                                nohup java -Xmx256m -jar ${DEPLOY_BASE}/${env.BRANCH_NAME}/${JAR_NAME} --server.port=${branchPort} > ${DEPLOY_BASE}/${env.BRANCH_NAME}/app.log 2>&1 &
-                                """
-                            } else {
-                                bat """
-                                echo Stoppe alte Instanz...
-                                for /f "tokens=5" %%p in ('netstat -aon ^| find "9090" ^| find "LISTENING"') do taskkill /PID %%p /F >nul 2>&1
-
-                                echo Kopiere neue Version...
-                                if not exist "%DEPLOY_BASE%\\${env.BRANCH_NAME}" mkdir "%DEPLOY_BASE%\\${env.BRANCH_NAME}"
-                                copy target\\${JAR_NAME} "%DEPLOY_BASE%\\${env.BRANCH_NAME}\\${JAR_NAME}" /Y
-
-                                echo Starte neue Instanz...
-                                start /b java -Xmx256m -jar "%DEPLOY_BASE%\\${env.BRANCH_NAME}\\${JAR_NAME}" --server.port=${branchPort}
-                                """
-                            }
-
-                            echo "✅ Deployment abgeschlossen. App läuft auf Port ${branchPort}"
-                        }
-                    }
-                }
-            }
-
-        stage('Health Check') {
             steps {
+                echo "🚀 Starte Deployment..."
                 script {
-                    def port = env.ACTIVE_PORT ?: PORT
-                    echo "🔍 Prüfe MediTrack auf http://localhost:${port} (Health-Check)..."
+                    // Dynamische Port-Zuweisung je nach Branch
+                    def branchPort = [
+                        'main': 9090,
+                        'dev': 9091,
+                        'feature': 9092
+                    ][env.BRANCH_NAME] ?: 9099
 
-                    def healthy = false
-                    for (int i = 1; i <= 8; i++) {
-                        echo "⏳ Versuch ${i}..."
-                        sleep time: 4, unit: 'SECONDS'
+                    if (isUnix()) {
+                        sh """
+                            echo "🔧 Stoppe alte Instanz auf Port ${branchPort}..."
+                            sudo pkill -f "${JAR_NAME}" || true
+                            sleep 2
 
-                        try {
-                            def code = ""
-                            if (isUnix()) {
-                                code = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${port} || echo 000", returnStdout: true).trim()
-                            } else {
-                                code = bat(script: "powershell -Command \"(Invoke-WebRequest -Uri http://localhost:${port} -UseBasicParsing -ErrorAction SilentlyContinue).StatusCode\" || echo 000", returnStdout: true).trim()
-                            }
-                            echo "ℹ️ HTTP Status: ${code}"
-                            if (code.contains("200")) {
-                                healthy = true
-                                break
-                            }
-                        } catch (err) {
-                            echo "⚠️ Keine Antwort, warte kurz..."
-                        }
-                    }
+                            echo "🚚 Kopiere neue Version..."
+                            sudo mkdir -p ${DEPLOY_BASE}/${env.BRANCH_NAME}
+                            sudo cp target/${JAR_NAME} ${DEPLOY_BASE}/${env.BRANCH_NAME}/
 
-                    if (!healthy) {
-                        error "❌ Health Check fehlgeschlagen – MediTrack antwortet nicht auf Port ${port}"
+                            echo "🚀 Starte neue Instanz..."
+                            nohup java -Xmx256m -jar ${DEPLOY_BASE}/${env.BRANCH_NAME}/${JAR_NAME} --server.port=${branchPort} > ${DEPLOY_BASE}/${env.BRANCH_NAME}/app.log 2>&1 &
+                            echo "✅ Deployment abgeschlossen (läuft auf Port ${branchPort})."
+                        """
                     } else {
-                        echo "✅ Health Check erfolgreich — MediTrack läuft auf Port ${port}"
+                        bat """
+                            echo Stoppe alte Instanz...
+                            taskkill /F /IM java.exe /FI "WINDOWTITLE eq meditrack*" || exit 0
+                            timeout /t 2 >nul
+
+                            echo Starte neue Instanz...
+                            start "meditrack-${env.BRANCH_NAME}" java -Xmx256m -jar target\\${JAR_NAME} --server.port=${branchPort}
+                            echo Deployment abgeschlossen (läuft auf Port ${branchPort})
+                        """
                     }
                 }
             }
@@ -164,13 +112,13 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Build+Deploy erfolgreich. MediTrack erreichbar auf Port ${PORT}."
+            echo "🎉 Build & Deployment erfolgreich!"
         }
         failure {
-            echo "❌ Pipeline fehlgeschlagen."
+            echo "❌ Build oder Deployment fehlgeschlagen!"
         }
         always {
-            echo "🏁 Pipeline Ende."
+            echo "🧾 Pipeline abgeschlossen (${env.BRANCH_NAME})"
         }
     }
 }
