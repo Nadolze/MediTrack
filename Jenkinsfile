@@ -6,35 +6,30 @@ pipeline {
     }
 
     stages {
+
+        stage('Clean Workspace') {
+            steps {
+                deleteDir() // vor Checkout!
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Clean Workspace') {
-            steps {
-                script {
-                    // Nur alte Build-Artefakte löschen, nicht den Git-Code
-                    sh "rm -rf target/"
-                }
-            }
-        }
-
         stage('Setup') {
             steps {
                 script {
-                    branch = env.BRANCH_NAME
-                    DEPLOY_DIR = isUnix() ? "/opt/meditrack/${branch}" : "C:\\MediTrack\\${branch}"
-                    if (branch == 'main') {
-                        SERVER_PORT = 9090
-                    } else {
-                        BASE_PORT = 9091
-                        usedPorts = sh(script: "systemctl list-units --type=service | grep meditrack- | awk '{print \$1}' | sed -E 's/[^0-9]*([0-9]+)\\.service/\\1/'", returnStdout: true).trim().split("\n")
-                        while (usedPorts.contains(BASE_PORT.toString())) { BASE_PORT++ }
-                        SERVER_PORT = BASE_PORT
-                    }
-                    echo "Branch: ${branch}"
+                    // Branch und Deploy-Verzeichnis bestimmen
+                    def branchName = env.BRANCH_NAME
+                    DEPLOY_DIR = isUnix() ? "/opt/meditrack/${branchName}" : "C:\\MediTrack\\${branchName}"
+
+                    // Port: main = 9090, alle anderen auf nächstem freien Port
+                    SERVER_PORT = branchName == 'main' ? 9090 : findFreePort()
+
+                    echo "Branch: ${branchName}"
                     echo "Deploy dir: ${DEPLOY_DIR}"
                     echo "Server Port: ${SERVER_PORT}"
                 }
@@ -43,36 +38,48 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                script {
+                    if (isUnix()) {
+                        sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                    } else {
+                        bat "\"${MAVEN_HOME}\\bin\\mvn\" clean package -DskipTests"
+                    }
+                }
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
-                    sh "rm -rf ${DEPLOY_DIR} && mkdir -p ${DEPLOY_DIR}"
-                    sh "cp target/meditrack-0.0.1-SNAPSHOT.jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar"
+                    if (isUnix()) {
+                        sh """
+                        mkdir -p ${DEPLOY_DIR}
+                        cp target/meditrack-*.jar ${DEPLOY_DIR}/meditrack.jar
+                        # systemd Service erstellen oder aktualisieren
+                        cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH_NAME}.service
+                        [Unit]
+                        Description=MediTrack ${BRANCH_NAME} Service
+                        After=network.target
 
-                    sh """
-                        SERVICE_FILE=/etc/systemd/system/meditrack-${branch}.service
-                        cp /etc/systemd/system/meditrack-template.service \$SERVICE_FILE
-                        sed -i 's/%i/${branch}/g' \$SERVICE_FILE
-                        sed -i 's/%p/${SERVER_PORT}/g' \$SERVICE_FILE
-                        systemctl daemon-reload
-                        systemctl enable meditrack-${branch}.service
-                        systemctl restart meditrack-${branch}.service
-                    """
+                        [Service]
+                        User=jenkins
+                        WorkingDirectory=${DEPLOY_DIR}
+                        ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack.jar --server.port=${SERVER_PORT}
+                        Restart=always
+                        RestartSec=10
+
+                        [Install]
+                        WantedBy=multi-user.target
+                        EOF
+                        sudo systemctl daemon-reload
+                        sudo systemctl enable meditrack-${BRANCH_NAME}.service
+                        sudo systemctl restart meditrack-${BRANCH_NAME}.service
+                        """
+                    } else {
+                        // Windows Deployment mit NSSM oder PowerShell Service hier
+                    }
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Deployment erfolgreich für Branch ${env.BRANCH_NAME}"
-        }
-        failure {
-            echo "❌ Deployment fehlgeschlagen für Branch ${env.BRANCH_NAME}"
         }
     }
 }
