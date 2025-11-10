@@ -3,7 +3,6 @@ pipeline {
 
     stages {
 
-
         stage('Clean Workspace') {
             steps {
                 echo "Cleaning workspace AFTER checkout"
