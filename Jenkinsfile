@@ -1,14 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        BASE_DEPLOY_DIR = "/opt/meditrack"
-        MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
-        BRANCH = "${env.BRANCH_NAME}"
-        SERVER_PORT = BRANCH == 'main' ? 9090 : (BRANCH == 'test' ? 9091 : 9092)
-        DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -16,14 +8,28 @@ pipeline {
             }
         }
 
-        stage('Merge Main into Test (falls Test)') {
-            when {
-                expression { BRANCH == 'test' }
-            }
+        stage('Setup Environment') {
             steps {
                 script {
-                    sh "git fetch origin main"
-                    sh "git merge origin/main --no-ff -m 'Merge main into test'"
+                    BRANCH = env.BRANCH_NAME
+                    BASE_DEPLOY_DIR = "/opt/meditrack"
+                    DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
+
+                    // Branch-Port-Mapping
+                    switch(BRANCH) {
+                        case 'main':
+                            SERVER_PORT = 9090
+                            break
+                        case 'test':
+                            SERVER_PORT = 9091
+                            break
+                        default:
+                            SERVER_PORT = 9092
+                    }
+
+                    echo "Branch: ${BRANCH}"
+                    echo "Deploy dir: ${DEPLOY_DIR}"
+                    echo "Server Port: ${SERVER_PORT}"
                 }
             }
         }
@@ -31,6 +37,7 @@ pipeline {
         stage('Clean Build Artifacts') {
             steps {
                 script {
+                    echo "Cleaning old build artifacts..."
                     sh "rm -rf target"
                     sh "mkdir -p ${DEPLOY_DIR}"
                 }
@@ -39,14 +46,20 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                script {
+                    echo "Building project..."
+                    sh "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11/bin/mvn clean package -DskipTests"
+                }
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
+                    echo "Deploying branch ${BRANCH} on port ${SERVER_PORT}..."
                     sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+
+                    // Systemd Service erstellen/aktualisieren
                     sh """
                     cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH}.service
                     [Unit]
@@ -62,9 +75,11 @@ pipeline {
                     WantedBy=multi-user.target
                     EOF
                     """
+
                     sh "sudo systemctl daemon-reload"
                     sh "sudo systemctl enable meditrack-${BRANCH}.service"
                     sh "sudo systemctl restart meditrack-${BRANCH}.service"
+
                     echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
                 }
             }
