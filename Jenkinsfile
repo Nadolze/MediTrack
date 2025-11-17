@@ -90,16 +90,14 @@ pipeline {
 
 // Hilfsfunktion für freie Ports auf Unix
 def findFreePort() {
-    def ports = (9091..9199).toList() // ← nicht mehr IntRange!
-
-    for (int portCandidate : ports) {
+    def port
+    for (portCandidate in 9091..9199) {
         def result = sh(script: "ss -tuln | grep :${portCandidate}", returnStatus: true)
-
         if (result != 0) {
-            return portCandidate  // ← DAS ist dein "return port"
+            port = portCandidate
+            break
         }
     }
-
-    error "No free port found!"
+    if (port == null) error "No free port found!"
+    return port
 }
-
