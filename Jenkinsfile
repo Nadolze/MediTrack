@@ -1,8 +1,13 @@
 pipeline {
     agent any
 
+    environment {
+        MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
+        BASE_DEPLOY_DIR = "/var/lib/jenkins/meditrack"
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
                 checkout scm
             }
@@ -11,39 +16,21 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 script {
-                    // OS check
-                    def isUnix = isUnix()
+                    // Branch erkennen
+                    BRANCH = env.BRANCH_NAME
+                    DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
 
-                    // Branch
-                    def BRANCH = env.BRANCH_NAME
-
-                    // Deployment directories
-                    def BASE_DEPLOY_DIR = isUnix ? "/var/lib/jenkins/meditrack" : "C:\\MediTrack"
-                    def DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
-
-                    // Server Ports
-                    def SERVER_PORT = BRANCH == 'main' ? 9090 : (BRANCH == 'test' ? 9091 : 9092)
-
-                    // Maven Home
-                    def MAVEN_HOME = tool name: 'Maven_3.9.11', type: 'hudson.tasks.Maven$MavenInstallation'
-
-                    // Export variables to environment
-                    env.BRANCH = BRANCH
-                    env.DEPLOY_DIR = DEPLOY_DIR
-                    env.SERVER_PORT = "${SERVER_PORT}"
-                    env.MAVEN_HOME = MAVEN_HOME
+                    // Port je nach Branch
+                    SERVER_PORT = (BRANCH == 'main') ? 9090 :
+                                  (BRANCH == 'test') ? 9091 : 9092
 
                     echo "Branch: ${BRANCH}"
-                    echo "Deploy Dir: ${DEPLOY_DIR}"
+                    echo "Deploy dir: ${DEPLOY_DIR}"
                     echo "Server Port: ${SERVER_PORT}"
                     echo "Maven Home: ${MAVEN_HOME}"
 
-                    // Ensure deploy dir exists
-                    if (isUnix) {
-                        sh "mkdir -p ${DEPLOY_DIR}"
-                    } else {
-                        bat "mkdir ${DEPLOY_DIR}"
-                    }
+                    // Deploy-Verzeichnis anlegen
+                    sh "mkdir -p ${DEPLOY_DIR}"
                 }
             }
         }
@@ -51,12 +38,7 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    // Non-resumable Maven call
-                    if (isUnix()) {
-                        sh "${env.MAVEN_HOME}/bin/mvn clean package -DskipTests"
-                    } else {
-                        bat "${env.MAVEN_HOME}\\bin\\mvn clean package -DskipTests"
-                    }
+                    sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
                 }
             }
         }
@@ -64,36 +46,34 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    if (isUnix()) {
-                        // Copy JAR
-                        sh "cp target/meditrack-*.jar ${env.DEPLOY_DIR}/"
+                    // Alten Service stoppen (falls existiert)
+                    sh "sudo systemctl stop meditrack-${BRANCH}.service || true"
 
-                        // Write Systemd service
-                        sh """
-                        cat <<EOF | sudo tee /etc/systemd/system/meditrack-${env.BRANCH}.service
-                        [Unit]
-                        Description=MediTrack Spring Boot Application for ${env.BRANCH}
-                        After=network.target
+                    // JAR kopieren
+                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
 
-                        [Service]
-                        User=jenkins
-                        ExecStart=/usr/bin/java -jar ${env.DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${env.SERVER_PORT}
-                        Restart=always
+                    // Systemd-Service erstellen / ersetzen
+                    sh """
+                    cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH}.service
+                    [Unit]
+                    Description=MediTrack Spring Boot Application for ${BRANCH}
+                    After=network.target
 
-                        [Install]
-                        WantedBy=multi-user.target
-                        EOF
-                        """
+                    [Service]
+                    User=jenkins
+                    ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
+                    Restart=always
 
-                        sh "sudo systemctl daemon-reload"
-                        sh "sudo systemctl enable meditrack-${env.BRANCH}.service"
-                        sh "sudo systemctl restart meditrack-${env.BRANCH}.service"
-                    } else {
-                        bat "copy target\\meditrack-*.jar ${env.DEPLOY_DIR}\\"
-                        echo "Windows deployment: bitte NSSM oder ähnliches für Service nutzen"
-                    }
+                    [Install]
+                    WantedBy=multi-user.target
+                    EOF
+                    """
 
-                    echo "✅ Deployed branch ${env.BRANCH} on port ${env.SERVER_PORT}"
+                    sh "sudo systemctl daemon-reload"
+                    sh "sudo systemctl enable meditrack-${BRANCH}.service"
+                    sh "sudo systemctl restart meditrack-${BRANCH}.service"
+
+                    echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
                 }
             }
         }
