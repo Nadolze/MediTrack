@@ -1,45 +1,71 @@
 pipeline {
     agent any
 
-    stages {
+    environment {
+        BASE_DEPLOY_DIR = "/opt/meditrack"
+        MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
+        BRANCH = "${env.BRANCH_NAME}"
+        SERVER_PORT = BRANCH == 'main' ? 9090 : (BRANCH == 'test' ? 9091 : 9092)
+        DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
+    }
 
+    stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Build') {
+        stage('Merge Main into Test (falls Test)') {
+            when {
+                expression { BRANCH == 'test' }
+            }
             steps {
                 script {
-                    def mvn = isUnix() 
-                        ? "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11/bin/mvn"
-                        : "C:\\Maven\\bin\\mvn.cmd"
-
-                    sh "${mvn} clean package -DskipTests"    // Linux
+                    sh "git fetch origin main"
+                    sh "git merge origin/main --no-ff -m 'Merge main into test'"
                 }
             }
         }
 
-        stage('Run (only main)') {
-            when {
-                branch 'main'
-            }
+        stage('Clean Build Artifacts') {
             steps {
                 script {
-                    echo "Starting main branch JAR on port 9090"
+                    sh "rm -rf target"
+                    sh "mkdir -p ${DEPLOY_DIR}"
+                }
+            }
+        }
 
-                    if (isUnix()) {
-                        sh '''
-                            pkill -f "meditrack" || true
-                            nohup java -jar target/meditrack-*.jar --server.port=9090 &
-                        '''
-                    } else {
-                        bat '''
-                            taskkill /IM java.exe /F
-                            start java -jar target\\meditrack-*.jar --server.port=9090
-                        '''
-                    }
+        stage('Build') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+                    sh """
+                    cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH}.service
+                    [Unit]
+                    Description=MediTrack Spring Boot Application for ${BRANCH}
+                    After=network.target
+
+                    [Service]
+                    User=jenkins
+                    ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
+                    Restart=always
+
+                    [Install]
+                    WantedBy=multi-user.target
+                    EOF
+                    """
+                    sh "sudo systemctl daemon-reload"
+                    sh "sudo systemctl enable meditrack-${BRANCH}.service"
+                    sh "sudo systemctl restart meditrack-${BRANCH}.service"
+                    echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
                 }
             }
         }
