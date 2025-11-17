@@ -11,38 +11,39 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 script {
-                    // Branch-Namen
+                    // OS check
+                    def isUnix = isUnix()
+
+                    // Branch
                     def BRANCH = env.BRANCH_NAME
-                    // Deploy-Ordner in Jenkins Home
-                    def BASE_DEPLOY_DIR = "${env.JENKINS_HOME}/meditrack"
+
+                    // Deployment directories
+                    def BASE_DEPLOY_DIR = isUnix ? "/var/lib/jenkins/meditrack" : "C:\\MediTrack"
                     def DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
 
-                    // Server-Port je Branch
-                    def SERVER_PORT = BRANCH == 'main' ? 9090 :
-                                      (BRANCH == 'test' ? 9091 : 9092)
+                    // Server Ports
+                    def SERVER_PORT = BRANCH == 'main' ? 9090 : (BRANCH == 'test' ? 9091 : 9092)
 
-                    // Maven über Jenkins Tool
+                    // Maven Home
                     def MAVEN_HOME = tool name: 'Maven_3.9.11', type: 'hudson.tasks.Maven$MavenInstallation'
 
-                    // Variablen für andere Stages
+                    // Export variables to environment
                     env.BRANCH = BRANCH
                     env.DEPLOY_DIR = DEPLOY_DIR
-                    env.SERVER_PORT = SERVER_PORT
+                    env.SERVER_PORT = "${SERVER_PORT}"
                     env.MAVEN_HOME = MAVEN_HOME
 
                     echo "Branch: ${BRANCH}"
-                    echo "Deploy dir: ${DEPLOY_DIR}"
+                    echo "Deploy Dir: ${DEPLOY_DIR}"
                     echo "Server Port: ${SERVER_PORT}"
                     echo "Maven Home: ${MAVEN_HOME}"
-                }
-            }
-        }
 
-        stage('Clean Build Artifacts') {
-            steps {
-                script {
-                    sh "rm -rf target"
-                    sh "mkdir -p ${env.DEPLOY_DIR}"
+                    // Ensure deploy dir exists
+                    if (isUnix) {
+                        sh "mkdir -p ${DEPLOY_DIR}"
+                    } else {
+                        bat "mkdir ${DEPLOY_DIR}"
+                    }
                 }
             }
         }
@@ -50,7 +51,12 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    sh "${env.MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                    // Non-resumable Maven call
+                    if (isUnix()) {
+                        sh "${env.MAVEN_HOME}/bin/mvn clean package -DskipTests"
+                    } else {
+                        bat "${env.MAVEN_HOME}\\bin\\mvn clean package -DskipTests"
+                    }
                 }
             }
         }
@@ -58,25 +64,35 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    sh """
-                        cp target/meditrack-*.jar ${env.DEPLOY_DIR}/
+                    if (isUnix()) {
+                        // Copy JAR
+                        sh "cp target/meditrack-*.jar ${env.DEPLOY_DIR}/"
+
+                        // Write Systemd service
+                        sh """
                         cat <<EOF | sudo tee /etc/systemd/system/meditrack-${env.BRANCH}.service
-[Unit]
-Description=MediTrack Spring Boot Application for ${env.BRANCH}
-After=network.target
+                        [Unit]
+                        Description=MediTrack Spring Boot Application for ${env.BRANCH}
+                        After=network.target
 
-[Service]
-User=jenkins
-ExecStart=/usr/bin/java -jar ${env.DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${env.SERVER_PORT}
-Restart=always
+                        [Service]
+                        User=jenkins
+                        ExecStart=/usr/bin/java -jar ${env.DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${env.SERVER_PORT}
+                        Restart=always
 
-[Install]
-WantedBy=multi-user.target
-EOF
-                        sudo systemctl daemon-reload
-                        sudo systemctl enable meditrack-${env.BRANCH}.service
-                        sudo systemctl restart meditrack-${env.BRANCH}.service
-                    """
+                        [Install]
+                        WantedBy=multi-user.target
+                        EOF
+                        """
+
+                        sh "sudo systemctl daemon-reload"
+                        sh "sudo systemctl enable meditrack-${env.BRANCH}.service"
+                        sh "sudo systemctl restart meditrack-${env.BRANCH}.service"
+                    } else {
+                        bat "copy target\\meditrack-*.jar ${env.DEPLOY_DIR}\\"
+                        echo "Windows deployment: bitte NSSM oder ähnliches für Service nutzen"
+                    }
+
                     echo "✅ Deployed branch ${env.BRANCH} on port ${env.SERVER_PORT}"
                 }
             }
