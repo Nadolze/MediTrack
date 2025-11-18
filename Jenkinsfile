@@ -1,8 +1,8 @@
 pipeline {
     agent any
     options {
-        disableConcurrentBuilds() // nur 1 Build gleichzeitig
-        timeout(time: 30, unit: 'MINUTES') // max 30 Minuten pro Build
+        disableConcurrentBuilds() // nur ein Build gleichzeitig
+        timeout(time: 30, unit: 'MINUTES')
     }
     tools {
         maven 'Maven_3.9.11'
@@ -10,18 +10,21 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: '*/', url: 'https://github.com/DEIN_USER/MediTrack.git'
+                // SCM nutzt automatisch die Branches der Multibranch Pipeline
+                checkout scm
             }
         }
+
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
+
         stage('Run Docker Container') {
             steps {
                 script {
-                    def branch = env.GIT_BRANCH.replaceAll('origin/', '')
+                    def branch = env.BRANCH_NAME
                     def port = getPortForBranch(branch)
 
                     sh """
