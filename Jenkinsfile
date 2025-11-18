@@ -2,102 +2,92 @@ pipeline {
     agent any
 
     environment {
-        MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
-        DEPLOY_BASE = "/var/lib/jenkins/meditrack"
-        JAR_NAME = "meditrack-0.0.1-SNAPSHOT.jar"
+        MAIN_BRANCH = "main"
+        TEST_BRANCH = "test"
+        FEATURE_BRANCH = "features"
     }
 
     stages {
 
-        stage('Force Jenkinsfile from Main') {
+        stage('Checkout Jenkinsfile from main') {
             steps {
                 script {
-                    echo "🔄 Fetching Jenkinsfile from MAIN"
                     sh """
-                        git fetch --all
-                        MAIN_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
-                        git show origin/$MAIN_BRANCH:Jenkinsfile > Jenkinsfile
+                        git fetch origin ${MAIN_BRANCH}
+                        git checkout origin/${MAIN_BRANCH} -- Jenkinsfile
                     """
                 }
             }
         }
 
-        stage('Checkout Code') {
+        stage('Checkout Source') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${env.GIT_BRANCH}"]],
+                    userRemoteConfigs: [[
+                        url: "https://github.com/Nadolze/MediTrack.git"
+                    ]]
+                ])
             }
         }
 
-        stage('Determine Branch and Port') {
+        stage('Select Port') {
             steps {
                 script {
-                    BRANCH = env.BRANCH_NAME
 
-                    PORT = (BRANCH == "main") ? 9090 :
-                           (BRANCH == "test") ? 9091 :
-                           (BRANCH == "features") ? 9092 :
-                           (9000 + (new Random().nextInt(99))) // fallback
+                    if (env.GIT_BRANCH == "origin/${MAIN_BRANCH}") {
+                        PORT = 9090
+                    }
+                    else if (env.GIT_BRANCH == "origin/${TEST_BRANCH}") {
+                        PORT = 9091
+                    }
+                    else if (env.GIT_BRANCH == "origin/${FEATURE_BRANCH}") {
+                        PORT = 9092
+                    }
+                    else {
+                        // hash fallback for unknown branches
+                        PORT = 9093 + (env.GIT_BRANCH.hashCode().abs() % 10)
+                    }
 
-                    DEPLOY_DIR = "${DEPLOY_BASE}/${BRANCH}"
-
-                    echo "📌 Branch   : ${BRANCH}"
-                    echo "📌 Port     : ${PORT}"
-                    echo "📌 Deploy   : ${DEPLOY_DIR}"
+                    echo "Selected port: ${PORT}"
                 }
             }
         }
 
         stage('Build') {
             steps {
-                script {
-                    sh """
-                       ${MAVEN_HOME}/bin/mvn clean package -DskipTests
-                    """
-                }
+                sh """
+                    ./mvnw clean package -DskipTests
+                """
             }
         }
 
-        stage('Prepare Deployment') {
+        stage('Stop old version') {
             steps {
-                script {
-                    echo "📦 Preparing deploy folder"
-                    sh "mkdir -p ${DEPLOY_DIR}"
-                    sh "cp target/${JAR_NAME} ${DEPLOY_DIR}/"
-                }
+                sh """
+                    pkill -f "meditrack.*--server.port=${PORT}" || true
+                """
             }
         }
 
-        stage('Create Systemd Service') {
+        stage('Run server') {
             steps {
-                script {
-                    echo "⚙️ Creating/updating service meditrack-${BRANCH}"
-
-                    sh """
-                    cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH}.service
-                    [Unit]
-                    Description=MediTrack (${BRANCH}) on port ${PORT}
-                    After=network.target
-
-                    [Service]
-                    User=jenkins
-                    ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/${JAR_NAME} --server.port=${PORT}
-                    Restart=always
-                    WorkingDirectory=${DEPLOY_DIR}
-
-                    [Install]
-                    WantedBy=multi-user.target
-                    EOF
-                    """
-
-                    sh """
-                        sudo systemctl daemon-reload
-                        sudo systemctl enable meditrack-${BRANCH}.service
-                        sudo systemctl restart meditrack-${BRANCH}.service || sudo systemctl start meditrack-${BRANCH}.service
-                    """
-
-                    echo "🚀 Running: meditrack-${BRANCH}.service on port ${PORT}"
-                }
+                sh """
+                    nohup java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} &
+                    sleep 3
+                """
+                echo "Server running at port: ${PORT}"
             }
+        }
+    }
+
+    post {
+        failure {
+            echo "Build or deployment failed"
+        }
+        success {
+            echo "✔ Deployment done"
         }
     }
 }
