@@ -5,52 +5,39 @@ pipeline {
         MAIN_BRANCH = "main"
         TEST_BRANCH = "test"
         FEATURE_BRANCH = "features"
+        MAVEN = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11/bin/mvn"
     }
 
     stages {
 
-        stage('Checkout Jenkinsfile from main') {
+        stage('Checkout Code') {
             steps {
+                checkout scm
                 script {
-                    sh """
-                        git fetch origin ${MAIN_BRANCH}
-                        git checkout origin/${MAIN_BRANCH} -- Jenkinsfile
-                    """
+                    BRANCH = env.BRANCH_NAME
+                    echo "Detected branch: ${BRANCH}"
                 }
             }
         }
 
-        stage('Checkout Source') {
-            steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: "*/${env.GIT_BRANCH}"]],
-                    userRemoteConfigs: [[
-                        url: "https://github.com/Nadolze/MediTrack.git"
-                    ]]
-                ])
-            }
-        }
-
-        stage('Select Port') {
+        stage('Determine Port') {
             steps {
                 script {
-
-                    if (env.GIT_BRANCH == "origin/${MAIN_BRANCH}") {
+                    if (BRANCH == MAIN_BRANCH) {
                         PORT = 9090
                     }
-                    else if (env.GIT_BRANCH == "origin/${TEST_BRANCH}") {
+                    else if (BRANCH == TEST_BRANCH) {
                         PORT = 9091
                     }
-                    else if (env.GIT_BRANCH == "origin/${FEATURE_BRANCH}") {
+                    else if (BRANCH == FEATURE_BRANCH) {
                         PORT = 9092
                     }
                     else {
-                        // hash fallback for unknown branches
-                        PORT = 9093 + (env.GIT_BRANCH.hashCode().abs() % 10)
+                        // other branches → assign dynamically
+                        PORT = 9093 + (BRANCH.hashCode().abs() % 10)
                     }
 
-                    echo "Selected port: ${PORT}"
+                    echo "▶ Assigned port: ${PORT}"
                 }
             }
         }
@@ -58,12 +45,12 @@ pipeline {
         stage('Build') {
             steps {
                 sh """
-                    ./mvnw clean package -DskipTests
+                    ${MAVEN} clean package -DskipTests
                 """
             }
         }
 
-        stage('Stop old version') {
+        stage('Stop Old Instance') {
             steps {
                 sh """
                     pkill -f "meditrack.*--server.port=${PORT}" || true
@@ -71,23 +58,23 @@ pipeline {
             }
         }
 
-        stage('Run server') {
+        stage('Run New Instance') {
             steps {
                 sh """
-                    nohup java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} &
-                    sleep 3
+                    nohup java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} >/dev/null 2>&1 &
+                    sleep 2
                 """
-                echo "Server running at port: ${PORT}"
+                echo "✔ Server started on port ${PORT}"
             }
         }
     }
 
     post {
         failure {
-            echo "Build or deployment failed"
+            echo "❌ Build or deploy failed"
         }
         success {
-            echo "✔ Deployment done"
+            echo "✔ Done: Branch ${BRANCH} is running on port ${PORT}"
         }
     }
 }
