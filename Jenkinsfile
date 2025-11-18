@@ -13,61 +13,107 @@ pipeline {
             }
         }
 
-        stage('Setup') {
+        stage('Build') {
             steps {
                 script {
-                    BRANCH = env.BRANCH_NAME
-                    DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
-
-                    SERVER_PORT = (BRANCH == 'main') ? 9090 :
-                                  (BRANCH == 'test') ? 9091 : 9092
-
-                    echo "Branch: ${BRANCH}"
-                    echo "Deploy dir: ${DEPLOY_DIR}"
-                    echo "Server Port: ${SERVER_PORT}"
-
-                    sh "mkdir -p ${DEPLOY_DIR}"
+                    sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
                 }
             }
         }
 
-        stage('Build') {
-            steps {
-                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
+        stage('Run Main Server') {
+            when {
+                branch 'main'
             }
-        }
-
-        stage('Deploy & Run') {
             steps {
-                // Stoppen des alten Services (falls vorhanden)
-                sh "sudo systemctl stop meditrack-${BRANCH}.service || true"
-
-                // JAR kopieren
-                sh "sudo cp target/meditrack-*.jar ${BASE_DEPLOY_DIR}/${BRANCH}/"
-
-                // Service erstellen / ersetzen
-                sh """
-                sudo bash -c 'cat <<EOF > /etc/systemd/system/meditrack-${BRANCH}.service
+                script {
+                    DEPLOY_DIR="${BASE_DEPLOY_DIR}/main"
+                    sh "mkdir -p ${DEPLOY_DIR}"
+                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+                    sh """
+                    sudo bash -c 'cat <<EOF > /etc/systemd/system/meditrack-main.service
 [Unit]
-Description=MediTrack Spring Boot Application for ${BRANCH}
+Description=MediTrack Main Branch
 After=network.target
 
 [Service]
 User=jenkins
-ExecStart=/usr/bin/java -jar ${BASE_DEPLOY_DIR}/${BRANCH}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
+ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=9090
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF'
-                """
+                    """
+                    sh "sudo systemctl daemon-reload"
+                    sh "sudo systemctl enable meditrack-main.service"
+                    sh "sudo systemctl restart meditrack-main.service"
+                    echo "✅ Main branch running on port 9090"
+                }
+            }
+        }
 
-                // systemd neu laden und starten
-                sh "sudo systemctl daemon-reload"
-                sh "sudo systemctl enable meditrack-${BRANCH}.service"
-                sh "sudo systemctl restart meditrack-${BRANCH}.service"
+        stage('Run Test Server') {
+            when {
+                branch 'test'
+            }
+            steps {
+                script {
+                    DEPLOY_DIR="${BASE_DEPLOY_DIR}/test"
+                    sh "mkdir -p ${DEPLOY_DIR}"
+                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+                    sh """
+                    sudo bash -c 'cat <<EOF > /etc/systemd/system/meditrack-test.service
+[Unit]
+Description=MediTrack Test Branch
+After=network.target
 
-                echo "✅ Branch ${BRANCH} deployed on port ${SERVER_PORT}"
+[Service]
+User=jenkins
+ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=9091
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+                    """
+                    sh "sudo systemctl daemon-reload"
+                    sh "sudo systemctl enable meditrack-test.service"
+                    sh "sudo systemctl restart meditrack-test.service"
+                    echo "✅ Test branch running on port 9091"
+                }
+            }
+        }
+
+        stage('Run Features Server') {
+            when {
+                branch 'features'
+            }
+            steps {
+                script {
+                    DEPLOY_DIR="${BASE_DEPLOY_DIR}/features"
+                    sh "mkdir -p ${DEPLOY_DIR}"
+                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+                    sh """
+                    sudo bash -c 'cat <<EOF > /etc/systemd/system/meditrack-features.service
+[Unit]
+Description=MediTrack Features Branch
+After=network.target
+
+[Service]
+User=jenkins
+ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=9092
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+                    """
+                    sh "sudo systemctl daemon-reload"
+                    sh "sudo systemctl enable meditrack-features.service"
+                    sh "sudo systemctl restart meditrack-features.service"
+                    echo "✅ Features branch running on port 9092"
+                }
             }
         }
     }
