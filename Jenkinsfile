@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
-        BASE_DEPLOY_DIR = "/var/lib/jenkins/meditrack"
+        BASE_DEPLOY_DIR = "/opt/meditrack"
     }
 
     stages {
@@ -29,8 +29,8 @@ pipeline {
                     echo "Server Port: ${SERVER_PORT}"
                     echo "Maven Home: ${MAVEN_HOME}"
 
-                    // Deploy-Verzeichnis anlegen
-                    sh "mkdir -p ${DEPLOY_DIR}"
+                    // Deploy-Verzeichnis anlegen (sudo nötig)
+                    sh "sudo mkdir -p ${DEPLOY_DIR}"
                 }
             }
         }
@@ -46,15 +46,15 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Alten Service stoppen (falls existiert)
+                    // Alten Service stoppen, falls er existiert
                     sh "sudo systemctl stop meditrack-${BRANCH}.service || true"
 
                     // JAR kopieren
-                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+                    sh "sudo cp target/meditrack-*.jar ${DEPLOY_DIR}/"
 
                     // Systemd-Service erstellen / ersetzen
                     sh """
-                    cat <<EOF | sudo tee /etc/systemd/system/meditrack-${BRANCH}.service
+                    sudo bash -c 'cat <<EOF > /etc/systemd/system/meditrack-${BRANCH}.service
                     [Unit]
                     Description=MediTrack Spring Boot Application for ${BRANCH}
                     After=network.target
@@ -66,9 +66,10 @@ pipeline {
 
                     [Install]
                     WantedBy=multi-user.target
-                    EOF
+                    EOF'
                     """
 
+                    // systemd neu laden und Service starten
                     sh "sudo systemctl daemon-reload"
                     sh "sudo systemctl enable meditrack-${BRANCH}.service"
                     sh "sudo systemctl restart meditrack-${BRANCH}.service"
