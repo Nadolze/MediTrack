@@ -72,7 +72,8 @@ pipeline {
 
                     [Service]
                     User=jenkins
-                    ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
+                   ExecStart=/usr/bin/java -Xmx1024m -Xms256m -XX:ActiveProcessorCount=1 -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
+
                     Restart=always
 
                     [Install]
