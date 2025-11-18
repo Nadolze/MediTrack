@@ -7,19 +7,20 @@ pipeline {
     }
 
     stages {
-        stage('Kill old MediTrack instances') {
+
+        stage('Kill all MediTrack servers') {
             steps {
+                echo "🔪 Killing all MediTrack instances on ports 9090-9099..."
                 sh '''
-                    echo "🔪 Killing MediTrack processes on ports 9090–9099..."
-                    for port in $(seq 9090 9099); do
+                    for port in {9090..9099}; do
                         pid=$(lsof -t -i:$port || true)
                         if [ ! -z "$pid" ]; then
                             echo "Killing PID $pid on port $port"
-                            kill -9 $pid || true
+                            kill -9 $pid
                         fi
                     done
-                    echo "🕑 Waiting 5 seconds before continuing..."
-                    sleep 5
+                    echo "🕑 Waiting 10 seconds to ensure all servers stopped..."
+                    sleep 10
                 '''
             }
         }
@@ -33,77 +34,74 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 script {
-                    BRANCH = env.BRANCH_NAME ?: sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
-                    DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
+                    def branch = env.BRANCH_NAME
+                    def deployDir = "${BASE_DEPLOY_DIR}/${branch}"
+                    def serverPort = 9093 // default port
 
-                    // Port je nach Branch
-                    SERVER_PORT = (BRANCH == 'main') ? 9090 :
-                                  (BRANCH == 'test') ? 9091 :
-                                  (BRANCH == 'features') ? 9092 :
-                                  9093 // alle anderen starten bei 9093 (einfachheitshalber)
+                    if (branch == 'main') {
+                        serverPort = 9090
+                    } else if (branch == 'test') {
+                        serverPort = 9091
+                    } else if (branch == 'features') {
+                        serverPort = 9092
+                    } // sonst bleibt default 9093+
 
-                    echo "Branch: ${BRANCH}"
-                    echo "Deploy dir: ${DEPLOY_DIR}"
-                    echo "Server Port: ${SERVER_PORT}"
+                    echo "Branch: ${branch}"
+                    echo "Deploy dir: ${deployDir}"
+                    echo "Server Port: ${serverPort}"
                     echo "Maven Home: ${MAVEN_HOME}"
 
-                    sh "mkdir -p ${DEPLOY_DIR}"
+                    sh "mkdir -p ${deployDir}"
+
+                    // Variablen global verfügbar machen
+                    env.DEPLOY_DIR = deployDir
+                    env.SERVER_PORT = serverPort.toString()
                 }
             }
         }
 
         stage('Build') {
             steps {
-                sh """
-                    echo "🔨 Building JAR..."
-                    ${MAVEN_HOME}/bin/mvn clean package -DskipTests
-                """
+                echo "🔨 Building JAR..."
+                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests"
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
-                    SERVICE_NAME="meditrack-${BRANCH}"
-
-                    // Alten Service stoppen
-                    sh "sudo systemctl stop ${SERVICE_NAME}.service || true"
-
-                    // JAR kopieren
-                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
-
-                    // systemd-Service erstellen/ersetzen
+                    echo "🚀 Deploying branch ${env.BRANCH_NAME} on port ${env.SERVER_PORT}..."
                     sh """
-                    cat <<EOF | sudo tee /etc/systemd/system/${SERVICE_NAME}.service
-                    [Unit]
-                    Description=MediTrack Spring Boot Application (${BRANCH})
-                    After=network.target
+                        cp target/meditrack-*.jar ${env.DEPLOY_DIR}/
 
-                    [Service]
-                    User=jenkins
-                    ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
-                    Restart=always
-                    LimitNOFILE=4096
-                    LimitNPROC=500
-                    CPUQuota=50%
+                        cat <<EOF | sudo tee /etc/systemd/system/meditrack-${env.BRANCH_NAME}.service
+                        [Unit]
+                        Description=MediTrack Spring Boot Application for ${env.BRANCH_NAME}
+                        After=network.target
 
-                    [Install]
-                    WantedBy=multi-user.target
-                    EOF
+                        [Service]
+                        User=jenkins
+                        ExecStart=/usr/bin/java -Xms128m -Xmx512m -jar ${env.DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${env.SERVER_PORT}
+                        Restart=on-failure
+                        CPUQuota=50%
+                        MemoryMax=512M
+
+                        [Install]
+                        WantedBy=multi-user.target
+                        EOF
+
+                        sudo systemctl daemon-reload
+                        sudo systemctl enable meditrack-${env.BRANCH_NAME}.service
+                        sudo systemctl restart meditrack-${env.BRANCH_NAME}.service
                     """
-
-                    sh "sudo systemctl daemon-reload"
-                    sh "sudo systemctl enable ${SERVICE_NAME}.service"
-                    sh "sudo systemctl restart ${SERVICE_NAME}.service"
-
-                    echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
+                    echo "✅ Deployed branch ${env.BRANCH_NAME} on port ${env.SERVER_PORT}"
                 }
             }
         }
 
         stage('Show Running') {
             steps {
-                sh "sudo systemctl status meditrack-${BRANCH}.service --no-pager || true"
+                sh "ps -ef | grep '[m]editrack'"
             }
         }
     }
