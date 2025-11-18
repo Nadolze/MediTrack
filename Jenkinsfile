@@ -12,7 +12,7 @@ pipeline {
             steps {
                 echo "🔪 Killing all MediTrack instances on ports 9090-9099..."
                 sh '''
-                    for port in {9090..9099}; do
+                    for port in $(seq 9090 9099); do
                         pid=$(lsof -t -i:$port || true)
                         if [ ! -z "$pid" ]; then
                             echo "Killing PID $pid on port $port"
@@ -21,6 +21,7 @@ pipeline {
                     done
                     echo "🕑 Waiting 10 seconds to ensure all servers stopped..."
                     sleep 10
+
                 '''
             }
         }
