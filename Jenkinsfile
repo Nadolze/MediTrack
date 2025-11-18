@@ -14,8 +14,9 @@ pipeline {
                 script {
                     echo "🔄 Fetching Jenkinsfile from MAIN"
                     sh """
-                        git fetch origin main
-                        git checkout origin/main -- Jenkinsfile
+                        git fetch --all
+                        MAIN_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+                        git show origin/$MAIN_BRANCH:Jenkinsfile > Jenkinsfile
                     """
                 }
             }
