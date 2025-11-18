@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
-        BASE_DEPLOY_DIR = "/opt/meditrack"
+        BASE_DEPLOY_DIR = "/var/lib/jenkins/meditrack"
     }
 
     stages {
@@ -16,7 +16,6 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 script {
-                    // Branch erkennen
                     BRANCH = env.BRANCH_NAME
                     DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
 
@@ -29,8 +28,22 @@ pipeline {
                     echo "Server Port: ${SERVER_PORT}"
                     echo "Maven Home: ${MAVEN_HOME}"
 
-                    // Deploy-Verzeichnis anlegen (sudo nötig)
-                    sh "sudo mkdir -p ${DEPLOY_DIR}"
+                    // Deploy-Verzeichnis anlegen
+                    sh "mkdir -p ${DEPLOY_DIR}"
+                }
+            }
+        }
+
+        stage('Prepare Test Merge') {
+            when {
+                branch 'test'
+            }
+            steps {
+                script {
+                    // Merge main into test für Test-Build
+                    sh "git fetch origin main"
+                    sh "git merge origin/main --no-edit || true"
+                    echo "Merged main into test branch"
                 }
             }
         }
@@ -46,13 +59,15 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Alten Service stoppen, falls er existiert
+                    echo "Deploying ${BRANCH} on port ${SERVER_PORT}"
+
+                    // Alten Service stoppen
                     sh "sudo systemctl stop meditrack-${BRANCH}.service || true"
 
                     // JAR kopieren
-                    sh "sudo cp target/meditrack-*.jar ${DEPLOY_DIR}/"
+                    sh "sudo cp target/meditrack-*.jar ${BASE_DEPLOY_DIR}/${BRANCH}/"
 
-                    // Systemd-Service erstellen / ersetzen
+                    // Systemd-Service erstellen
                     sh """
                     sudo bash -c 'cat <<EOF > /etc/systemd/system/meditrack-${BRANCH}.service
                     [Unit]
@@ -61,7 +76,7 @@ pipeline {
 
                     [Service]
                     User=jenkins
-                    ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
+                    ExecStart=/usr/bin/java -jar ${BASE_DEPLOY_DIR}/${BRANCH}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
                     Restart=always
 
                     [Install]
@@ -69,12 +84,11 @@ pipeline {
                     EOF'
                     """
 
-                    // systemd neu laden und Service starten
                     sh "sudo systemctl daemon-reload"
                     sh "sudo systemctl enable meditrack-${BRANCH}.service"
                     sh "sudo systemctl restart meditrack-${BRANCH}.service"
 
-                    echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
+                    echo "✅ Branch ${BRANCH} deployed and running on port ${SERVER_PORT}"
                 }
             }
         }
