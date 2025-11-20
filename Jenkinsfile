@@ -1,59 +1,67 @@
 pipeline {
     agent any
-    options {
-        disableConcurrentBuilds()
-        timeout(time: 30, unit: 'MINUTES')
-    }
+
     environment {
-        DOCKER_IMAGE_PREFIX = "meditrack"
-        BASE_PORT = 9090
-        MAX_CPU = "1"
-        MAX_MEM = "500m"
-        MAVEN_HOME = tool name: 'Maven_3.9.11', type: 'maven'
+        // Basis-Port für Feature-Branches
+        BASE_PORT = 9092
     }
+
     stages {
-        stage('Checkout SCM') {
+        stage('Determine Port') {
             steps {
-                git branch: "${env.BRANCH_NAME ?: 'main'}",
-                    url: 'git@github.com:Nadolze/MediTrack.git',
-                    credentialsId: 'github-meditrack-key'
+                script {
+                    def branch = env.BRANCH_NAME
+
+                    if (branch == "main") {
+                        PORT = 9090
+                    } else if (branch == "test") {
+                        PORT = 9091
+                    } else {
+                        // Hole alle Branch-Namen aus Git
+                        def branches = sh(
+                            script: "git for-each-ref --format='%(refname:short)' refs/heads | sort",
+                            returnStdout: true
+                        ).trim().split('\n')
+
+                        // Filtere "main" und "test" raus
+                        def featureBranches = branches.findAll { it != "main" && it != "test" }
+
+                        // Position in der alphabetischen Liste + 9092
+                        def index = featureBranches.indexOf(branch)
+                        if (index < 0) {
+                            error "Aktueller Branch taucht nicht in der Feature-Liste auf!"
+                        }
+
+                        PORT = BASE_PORT.toInteger() + index
+                    }
+
+                    echo "👉 Branch '${branch}' wird auf Port ${PORT} laufen."
+                }
             }
         }
 
-        stage('Build with Maven') {
+        stage('Build') {
+            steps {
+                sh "mvn clean package -DskipTests"
+            }
+        }
+
+        stage('Deploy') {
             steps {
                 script {
+                    // zuerst alte Instanz killen
                     sh """
-                        ${MAVEN_HOME}/bin/mvn clean package -DskipTests -T 1C -Dmaven.compiler.fork=false
+                    echo Kill vorhandene Instanz auf Port ${PORT}
+                    PID=\$(lsof -t -i:${PORT} || true)
+                    if [ ! -z "\$PID" ]; then
+                        kill -9 \$PID
+                    fi
                     """
-                }
-            }
-        }
 
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    def branch = env.BRANCH_NAME ?: 'main'
-                    def imageTag = "${DOCKER_IMAGE_PREFIX}:${branch}"
-                    sh "docker build -t ${imageTag} ."
-                }
-            }
-        }
-
-        stage('Run Docker Container') {
-            steps {
-                script {
-                    def branch = env.BRANCH_NAME ?: 'main'
-                    def basePort = 9090
-                    def portMap = ['main':9090, 'test':9091]
-                    def port = portMap.get(branch, basePort + env.BUILD_NUMBER.toInteger())
-
-                    sh "docker rm -f ${branch} || true"
+                    // starten
                     sh """
-                        docker run -d --name ${branch} -p ${port}:${port} \\
-                        --cpus=${MAX_CPU} --memory=${MAX_MEM} \\
-                        ${DOCKER_IMAGE_PREFIX}:${branch} \\
-                        --server.port=${port} -Xmx${MAX_MEM} -XX:ActiveProcessorCount=1
+                    echo Starte Server auf Port ${PORT}
+                    nohup java -jar target/*.jar --server.port=${PORT} >/dev/null 2>&1 &
                     """
                 }
             }
@@ -62,10 +70,7 @@ pipeline {
 
     post {
         always {
-            echo "Build finished for ${env.BRANCH_NAME ?: 'main'}"
-        }
-        failure {
-            echo "Build failed!"
+            echo "🚀 Deploy abgeschlossen: Branch '${env.BRANCH_NAME}' läuft nun auf Port ${PORT}"
         }
     }
 }
