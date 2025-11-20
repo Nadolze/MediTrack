@@ -5,7 +5,9 @@ pipeline {
         // Basis-Port für Feature-Branches
         BASE_PORT = 9092
     }
-
+tools {
+        maven 'Maven_3.9.11'
+    }
     stages {
         stage('Determine Port') {
             steps {
@@ -42,6 +44,7 @@ pipeline {
 
         stage('Build') {
             steps {
+                sh "mvn -v"
                 sh "mvn clean package -DskipTests"
             }
         }
