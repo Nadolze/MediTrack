@@ -10,13 +10,13 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                echo "Using Maven Version:"
-                sh "mvn -v"
-                sh "mvn clean package -DskipTests"
+        steps {
+                script {
+                    def mvnHome = tool name: 'Maven_3.9.11', type: 'maven'
+                    sh "${mvnHome}/bin/mvn -v"
+                    sh "${mvnHome}/bin/mvn clean package -DskipTests"
+                }
             }
-        }
 
         stage('Deploy') {
             steps {
