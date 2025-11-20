@@ -2,8 +2,10 @@ pipeline {
     agent any
 
     environment {
-        // Port für jeden Branch dynamisch
-        PORT = "${env.BRANCH_NAME == 'test' ? '9091' : '9090'}"
+        MVN_HOME = tool name: 'Maven_3.9.11', type: 'maven'
+        JAVA_HOME = tool name: 'JDK17', type: 'jdk'
+        PATH = "${MVN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
+        PORT = ''
     }
 
     stages {
@@ -13,25 +15,57 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Determine Port') {
             steps {
                 script {
-                    // Maven Tool aus Jenkins verwenden
-                    def mvnHome = tool name: 'Maven_3.9.11', type: 'maven'
-                    sh "${mvnHome}/bin/mvn -v"
-                    sh "${mvnHome}/bin/mvn clean package -DskipTests"
+                    if (env.BRANCH_NAME == 'main') {
+                        env.PORT = '9090'
+                    } else if (env.BRANCH_NAME == 'test') {
+                        env.PORT = '9091'
+                    } else if (env.BRANCH_NAME == 'features') {
+                        env.PORT = '9092'
+                    } else {
+                        env.PORT = '9093'
+                    }
+                    echo "Branch '${env.BRANCH_NAME}' will run on port ${env.PORT}"
                 }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh "mvn clean package -DskipTests"
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
-                    // Deploy.sh relativ zum Workspace aufrufen
+                    echo "Deploying branch '${env.BRANCH_NAME}' on port ${env.PORT}..."
+
+                    // Alte Instanz stoppen
                     sh """
-                    chmod +x ${env.WORKSPACE}/deploy.sh
-                    echo "Deploying branch '${env.BRANCH_NAME}' on port ${PORT}..."
-                    ${env.WORKSPACE}/deploy.sh ${PORT}
+                    PID=\$(lsof -ti:${env.PORT} || true)
+                    if [ -n "\$PID" ]; then
+                        echo "Stopping old process \$PID"
+                        kill \$PID
+                        sleep 5
+                        if kill -0 \$PID 2>/dev/null; then
+                            echo "Force killing \$PID"
+                            kill -9 \$PID
+                        fi
+                    else
+                        echo "No process running on port ${env.PORT}"
+                    fi
+                    """
+
+                    // Neue Instanz starten
+                    sh """
+                    echo "Starting new instance on port ${env.PORT}..."
+                    nohup java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${env.PORT} > target/app_${env.PORT}.log 2>&1 &
+                    sleep 3
+                    echo "Instance started on port ${env.PORT}, tailing last 100 log lines:"
+                    tail -n 100 target/app_${env.PORT}.log
                     """
                 }
             }
@@ -40,7 +74,7 @@ pipeline {
 
     post {
         always {
-            echo "Branch '${env.BRANCH_NAME}' ist deployed auf Port ${PORT}"
+            echo "Branch '${env.BRANCH_NAME}' is running on port ${env.PORT}"
         }
     }
 }
