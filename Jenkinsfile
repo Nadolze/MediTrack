@@ -1,8 +1,11 @@
 pipeline {
     agent any
+
     environment {
-        PORT = "${BRANCH_NAME == 'main' ? '9090' : '9091'}"
+        // Port für jeden Branch dynamisch
+        PORT = "${env.BRANCH_NAME == 'test' ? '9091' : '9090'}"
     }
+
     stages {
         stage('Checkout') {
             steps {
@@ -10,33 +13,34 @@ pipeline {
             }
         }
 
-        steps {
+        stage('Build') {
+            steps {
                 script {
+                    // Maven Tool aus Jenkins verwenden
                     def mvnHome = tool name: 'Maven_3.9.11', type: 'maven'
                     sh "${mvnHome}/bin/mvn -v"
                     sh "${mvnHome}/bin/mvn clean package -DskipTests"
                 }
             }
+        }
 
         stage('Deploy') {
             steps {
                 script {
-                    // Ensure deploy.sh is executable
-                    sh "chmod +x deploy.sh"
-
-                    // Deploy and show first 100 lines of log
+                    // Deploy.sh relativ zum Workspace aufrufen
                     sh """
-                        ./deploy.sh ${PORT}
-                        echo "==== First 100 lines of app_${PORT}.log ===="
-                        head -n 100 app_${PORT}.log
+                    chmod +x ${env.WORKSPACE}/deploy.sh
+                    echo "Deploying branch '${env.BRANCH_NAME}' on port ${PORT}..."
+                    ${env.WORKSPACE}/deploy.sh ${PORT}
                     """
                 }
             }
         }
     }
+
     post {
         always {
-            echo "Branch ${BRANCH_NAME} is deployed on port ${PORT}"
+            echo "Branch '${env.BRANCH_NAME}' ist deployed auf Port ${PORT}"
         }
     }
 }
