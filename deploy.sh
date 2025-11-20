@@ -1,17 +1,10 @@
 #!/bin/bash
-# deploy.sh
-# Usage: ./deploy.sh <PORT>
 
-PORT="$1"
-if [ -z "$PORT" ]; then
-  echo "Usage: $0 <PORT>"
-  exit 1
-fi
+PORT=$1
+JAR_FILE="target/meditrack-0.0.1-SNAPSHOT.jar"
+LOG_FILE="app_${PORT}.log"
 
-# absolute Pfade vermeiden, immer relativ zum aktuellen Verzeichnis
-WORKDIR="$(pwd)"
-
-echo "Stopping old instance on port ${PORT} (timeout 5s)..."
+echo "Stopping old instance on port ${PORT}..."
 PID=$(lsof -t -i:${PORT} || true)
 if [ -n "$PID" ]; then
     kill $PID
@@ -24,7 +17,12 @@ else
     echo "No process running on port ${PORT}"
 fi
 
-echo "Starting new instance on port ${PORT}..."
-nohup java -jar "$WORKDIR/target/meditrack-0.0.1-SNAPSHOT.jar" --server.port="${PORT}" > "$WORKDIR/app_${PORT}.log" 2>&1 &
+if [ ! -f "$JAR_FILE" ]; then
+    echo "Jar file $JAR_FILE does not exist! Build first."
+    exit 1
+fi
 
+echo "Starting new instance on port ${PORT}..."
+# Start detached from Jenkins
+setsid java -jar "$JAR_FILE" --server.port=${PORT} > "$LOG_FILE" 2>&1 < /dev/null &
 echo "Deployment auf Port ${PORT} abgeschlossen."
