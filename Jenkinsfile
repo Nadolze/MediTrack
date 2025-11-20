@@ -15,16 +15,17 @@ pipeline {
         stage('Determine Port') {
             steps {
                 script {
-                    def basePort = 9090
+                    // Branch-Port Mapping
                     if (env.BRANCH_NAME == 'main') {
-                        env.PORT = "${basePort}"
+                        PORT = 9090
                     } else if (env.BRANCH_NAME == 'test') {
-                        env.PORT = "${basePort + 1}"
+                        PORT = 9091
+                    } else if (env.BRANCH_NAME.startsWith('feature')) {
+                        PORT = 9092
                     } else {
-                        // Feature-Branches ab 9092
-                        env.PORT = "${basePort + 2 + Math.abs(env.BRANCH_NAME.hashCode() % 100)}"
+                        PORT = 9093
                     }
-                    echo "👉 Branch '${env.BRANCH_NAME}' wird auf Port ${env.PORT} laufen."
+                    echo "👉 Branch '${env.BRANCH_NAME}' wird auf Port ${PORT} laufen."
                 }
             }
         }
@@ -32,11 +33,8 @@ pipeline {
         stage('Build') {
             steps {
                 withEnv(["PATH+MAVEN=${MAVEN_HOME}/bin"]) {
-                    sh """
-                        echo "Using Maven Version:"
-                        mvn -v
-                        mvn clean package -DskipTests
-                    """
+                    sh 'echo Using Maven Version: && mvn -v'
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -44,36 +42,15 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    sh """
-                        echo "Stopping old instance on port ${PORT} (timeout 5s)..."
-                        PID=\$(lsof -t -i:${PORT} || true)
-                        if [ -n "\$PID" ]; then
-                            kill \$PID
-                            sleep 5
-                            if kill -0 \$PID 2>/dev/null; then
-                                echo "Force killing PID \$PID"
-                                kill -9 \$PID
-                            fi
-                        else
-                            echo "No process running on port ${PORT}"
-                        fi
-
-                        echo "Starting new instance on port ${PORT}..."
-                        setsid java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} > app_${PORT}.log 2>&1 < /dev/null &
-                    """
-                    echo "Deployment auf Port ${PORT} abgeschlossen."
-                    echo "Branch ${env.BRANCH_NAME} läuft nun auf Port ${PORT}"
+                    sh "./deploy.sh ${PORT}"
                 }
             }
         }
-    }
 
-    post {
-        success {
-            echo "✅ Branch ${env.BRANCH_NAME} erfolgreich deployed auf Port ${env.PORT}"
-        }
-        failure {
-            echo "❌ Deployment für Branch ${env.BRANCH_NAME} fehlgeschlagen"
+        stage('Post Actions') {
+            steps {
+                echo "Branch ${env.BRANCH_NAME} läuft auf Port ${PORT}"
+            }
         }
     }
 }
