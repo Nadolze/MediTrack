@@ -15,17 +15,16 @@ pipeline {
         stage('Determine Port') {
             steps {
                 script {
-                    // Branch-Port Mapping
+                    def basePort = 9090
                     if (env.BRANCH_NAME == 'main') {
-                        PORT = 9090
+                        env.PORT = "${basePort}"
                     } else if (env.BRANCH_NAME == 'test') {
-                        PORT = 9091
-                    } else if (env.BRANCH_NAME.startsWith('features')) {
-                        PORT = 9092
+                        env.PORT = "${basePort + 1}"
                     } else {
-                        PORT = 9093
+                        // Feature-Branches ab 9092
+                        env.PORT = "${basePort + 2 + Math.abs(env.BRANCH_NAME.hashCode() % 100)}"
                     }
-                    echo "👉 Branch '${env.BRANCH_NAME}' wird auf Port ${PORT} laufen."
+                    echo "👉 Branch '${env.BRANCH_NAME}' wird auf Port ${env.PORT} laufen."
                 }
             }
         }
@@ -33,11 +32,11 @@ pipeline {
         stage('Build') {
             steps {
                 withEnv(["PATH+MAVEN=${MAVEN_HOME}/bin"]) {
-                    sh '''
+                    sh """
                         echo "Using Maven Version:"
                         mvn -v
                         mvn clean package -DskipTests
-                    '''
+                    """
                 }
             }
         }
@@ -58,9 +57,8 @@ pipeline {
                         else
                             echo "No process running on port ${PORT}"
                         fi
-        
+
                         echo "Starting new instance on port ${PORT}..."
-                        # Start Java-Prozess unabhängig von Jenkins
                         setsid java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} > app_${PORT}.log 2>&1 < /dev/null &
                     """
                     echo "Deployment auf Port ${PORT} abgeschlossen."
@@ -72,10 +70,10 @@ pipeline {
 
     post {
         success {
-            script {
-                echo "Branch ${env.BRANCH_NAME} läuft auf Port:"
-                echo "${PORT}"
-            }
+            echo "✅ Branch ${env.BRANCH_NAME} erfolgreich deployed auf Port ${env.PORT}"
+        }
+        failure {
+            echo "❌ Deployment für Branch ${env.BRANCH_NAME} fehlgeschlagen"
         }
     }
 }
