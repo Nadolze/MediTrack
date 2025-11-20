@@ -2,55 +2,47 @@ pipeline {
     agent any
 
     environment {
+        // Branch-Port-Zuordnung
+        PORT = "${env.BRANCH_NAME == 'main' ? '9090' : (env.BRANCH_NAME == 'test' ? '9091' : '9092')}"
         MAVEN_HOME = tool name: 'Maven_3.9.11', type: 'maven'
+        PATH = "${MAVEN_HOME}/bin:${env.PATH}"
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Determine Port') {
-            steps {
-                script {
-                    // Branch-Port Mapping
-                    if (env.BRANCH_NAME == 'main') {
-                        PORT = 9090
-                    } else if (env.BRANCH_NAME == 'test') {
-                        PORT = 9091
-                    } else if (env.BRANCH_NAME.startsWith('feature')) {
-                        PORT = 9092
-                    } else {
-                        PORT = 9093
-                    }
-                    echo "👉 Branch '${env.BRANCH_NAME}' wird auf Port ${PORT} laufen."
-                }
-            }
-        }
-
         stage('Build') {
             steps {
-                withEnv(["PATH+MAVEN=${MAVEN_HOME}/bin"]) {
-                    sh 'echo Using Maven Version: && mvn -v'
-                    sh 'mvn clean package -DskipTests'
-                }
+                sh """
+                    echo "Using Maven Version:"
+                    mvn -v
+                    mvn clean package -DskipTests
+                """
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
-                    sh "./deploy.sh ${PORT}"
+                    // sicherstellen, dass deploy.sh ausführbar ist
+                    sh "chmod +x ${WORKSPACE}/deploy.sh"
+                    // deploy.sh ausführen mit branch-spezifischem PORT
+                    sh "${WORKSPACE}/deploy.sh ${PORT}"
                 }
             }
         }
+    }
 
-        stage('Post Actions') {
-            steps {
-                echo "Branch ${env.BRANCH_NAME} läuft auf Port ${PORT}"
-            }
+    post {
+        success {
+            echo "Branch ${env.BRANCH_NAME} läuft auf Port ${PORT}"
+        }
+        failure {
+            echo "Build oder Deployment fehlgeschlagen!"
         }
     }
 }
