@@ -47,12 +47,12 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // deploy.sh aus dem Branch nutzen
                     sh "chmod +x deploy.sh"
                     sh "./deploy.sh ${PORT}"
                 }
             }
         }
+
     }
 
     post {
