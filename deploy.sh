@@ -1,10 +1,8 @@
 #!/bin/bash
-
 PORT=$1
-JAR_FILE="target/meditrack-0.0.1-SNAPSHOT.jar"
 LOG_FILE="app_${PORT}.log"
 
-echo "Stopping old instance on port ${PORT}..."
+echo "Stopping old instance on port ${PORT} (timeout 5s)..."
 PID=$(lsof -t -i:${PORT} || true)
 if [ -n "$PID" ]; then
     kill $PID
@@ -17,12 +15,7 @@ else
     echo "No process running on port ${PORT}"
 fi
 
-if [ ! -f "$JAR_FILE" ]; then
-    echo "Jar file $JAR_FILE does not exist! Build first."
-    exit 1
-fi
-
 echo "Starting new instance on port ${PORT}..."
-# Start detached from Jenkins
-setsid java -jar "$JAR_FILE" --server.port=${PORT} > "$LOG_FILE" 2>&1 < /dev/null &
+# Spring Boot Logs gleichzeitig in Jenkins Console und Datei
+nohup bash -c "java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} 2>&1 | tee ${LOG_FILE}" >/dev/null 2>&1 &
 echo "Deployment auf Port ${PORT} abgeschlossen."
