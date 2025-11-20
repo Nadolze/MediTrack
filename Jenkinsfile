@@ -1,63 +1,42 @@
 pipeline {
     agent any
-
     environment {
-        MVN_HOME = tool name: 'Maven_3.9.11', type: 'maven'
+        PORT = "${BRANCH_NAME == 'main' ? '9090' : '9091'}"
     }
-
     stages {
-
-        stage('Checkout SCM') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Determine Port') {
-            steps {
-                script {
-                    // Haupt-Branches festlegen
-                    if (env.BRANCH_NAME == 'main') {
-                        PORT = 9090
-                    } else if (env.BRANCH_NAME == 'test') {
-                        PORT = 9091
-                    } else {
-                        // feature/* oder andere Branches → berechne dynamisch
-                        // einfache Hash-Funktion auf Branch-Namen
-                        hash = env.BRANCH_NAME.hashCode().abs() % 100 + 9100
-                        PORT = hash
-                    }
-                    echo "Branch '${env.BRANCH_NAME}' wird auf Port ${PORT} laufen."
-                }
-            }
-        }
-
         stage('Build') {
             steps {
-                withEnv(["PATH+MAVEN=${MVN_HOME}/bin"]) {
-                    sh """
-                        echo "Using Maven version:"
-                        mvn -v
-                        mvn clean package -DskipTests
-                    """
-                }
+                echo "Using Maven Version:"
+                sh "mvn -v"
+                sh "mvn clean package -DskipTests"
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
+                    // Ensure deploy.sh is executable
                     sh "chmod +x deploy.sh"
-                    sh "./deploy.sh ${PORT}"
+
+                    // Deploy and show first 100 lines of log
+                    sh """
+                        ./deploy.sh ${PORT}
+                        echo "==== First 100 lines of app_${PORT}.log ===="
+                        head -n 100 app_${PORT}.log
+                    """
                 }
             }
         }
-
     }
-
     post {
         always {
-            echo "Branch ${env.BRANCH_NAME} läuft auf Port ${PORT}"
+            echo "Branch ${BRANCH_NAME} is deployed on port ${PORT}"
         }
     }
 }

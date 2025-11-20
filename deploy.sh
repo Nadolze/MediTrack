@@ -1,4 +1,5 @@
 #!/bin/bash
+
 PORT=$1
 LOG_FILE="app_${PORT}.log"
 
@@ -16,5 +17,9 @@ else
 fi
 
 echo "Starting new instance on port ${PORT}..."
-# Spring Boot direkt in Jenkins ausgeben, kein &!
-java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} 2>&1 | tee ${LOG_FILE}
+nohup java -jar target/meditrack-0.0.1-SNAPSHOT.jar --server.port=${PORT} > ${LOG_FILE} 2>&1 &
+
+# Kleine Pause, damit Spring Boot initial starten kann
+sleep 2
+
+echo "Deployment done, logs written to ${LOG_FILE}"
