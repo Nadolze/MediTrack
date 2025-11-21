@@ -7,6 +7,10 @@ pipeline {
         BRANCH_NAME_SAFE = "${env.BRANCH_NAME.replaceAll('[^A-Za-z0-9_-]', '-')}"
         SERVICE_NAME = "meditrack-${BRANCH_NAME_SAFE}"
         DEPLOY_DIR = "/opt/${SERVICE_NAME}"
+        GIT_COMMIT_MESSAGE = sh(
+                script: "git log -1 --pretty=%B",
+                returnStdout: true
+            ).trim()
     }
 
     stages {
@@ -30,6 +34,17 @@ pipeline {
                     }
 
                     echo "Assigned PORT = ${PORT}"
+                }
+            }
+        }
+        stage('Commit Info') {
+            steps {
+                script {
+                    def msg = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
+                    def author = sh(script: "git log -1 --pretty='%an <%ae>'", returnStdout: true).trim()
+
+                    echo "Last commit author: ${author}"
+                    echo "Commit message: ${msg}"
                 }
             }
         }
