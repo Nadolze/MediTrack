@@ -2,75 +2,104 @@ pipeline {
     agent any
 
     environment {
-        // Basis-Port für Feature-Branches
-        BASE_PORT = 9092
+        // Basis-Port für dynamische Branches
+        BASE_DYNAMIC_PORT = "9093"
+        BRANCH_NAME_SAFE = "${env.BRANCH_NAME.replaceAll('[^A-Za-z0-9_-]', '-')}"
+        SERVICE_NAME = "meditrack-${BRANCH_NAME_SAFE}"
+        DEPLOY_DIR = "/opt/${SERVICE_NAME}"
     }
 
     stages {
-        stage('Determine Port') {
+
+        stage('Assign Port') {
             steps {
                 script {
-                    def branch = env.BRANCH_NAME
+                    // Statische Branch-Ports
+                    def staticPorts = [
+                        "main": 9090,
+                        "test": 9091,
+                        "features": 9092
+                    ]
 
-                    if (branch == "main") {
-                        PORT = 9090
-                    } else if (branch == "test") {
-                        PORT = 9091
+                    if (staticPorts.containsKey(env.BRANCH_NAME)) {
+                        PORT = staticPorts[env.BRANCH_NAME]
                     } else {
-                        // Hole alle Branch-Namen aus Git
-                        def branches = sh(
-                            script: "git for-each-ref --format='%(refname:short)' refs/heads | sort",
-                            returnStdout: true
-                        ).trim().split('\n')
-
-                        // Filtere "main" und "test" raus
-                        def featureBranches = branches.findAll { it != "main" && it != "test" }
-
-                        // Position in der alphabetischen Liste + 9092
-                        def index = featureBranches.indexOf(branch)
-                        if (index < 0) {
-                            error "Aktueller Branch taucht nicht in der Feature-Liste auf!"
-                        }
-
-                        PORT = BASE_PORT.toInteger() + index
+                        // Dynamische Port-Berechnung
+                        def hash = Math.abs(env.BRANCH_NAME.hashCode())
+                        PORT = BASE_DYNAMIC_PORT.toInteger() + (hash % 50)
                     }
 
-                    echo "👉 Branch '${branch}' wird auf Port ${PORT} laufen."
+                    echo "Assigned PORT = ${PORT}"
                 }
             }
         }
 
-        stage('Build') {
+        stage('Build Maven') {
             steps {
-                sh "mvn clean package -DskipTests"
+                sh """
+                    mvn -B -DskipTests clean package
+                """
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
-                    // zuerst alte Instanz killen
                     sh """
-                    echo Kill vorhandene Instanz auf Port ${PORT}
-                    PID=\$(lsof -t -i:${PORT} || true)
-                    if [ ! -z "\$PID" ]; then
-                        kill -9 \$PID
-                    fi
-                    """
-
-                    // starten
-                    sh """
-                    echo Starte Server auf Port ${PORT}
-                    nohup java -jar target/*.jar --server.port=${PORT} >/dev/null 2>&1 &
+                        sudo mkdir -p ${DEPLOY_DIR}
+                        sudo cp target/*.jar ${DEPLOY_DIR}/app.jar
+                        sudo chmod +x ${DEPLOY_DIR}/app.jar
                     """
                 }
+            }
+        }
+
+        stage('Create systemd service') {
+            steps {
+                script {
+                    def serviceFile = """
+[Unit]
+Description=MediTrack Service for ${env.BRANCH_NAME}
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/app.jar --server.port=${PORT}
+Restart=always
+RestartSec=10
+Environment=SPRING_DATASOURCE_URL=jdbc:mysql://82.165.255.70:3306/meditrack?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+Environment=SPRING_DATASOURCE_USERNAME=web_user
+Environment=SPRING_DATASOURCE_PASSWORD=Web_pass123!
+Environment=SPRING_JPA_HIBERNATE_DDL_AUTO=update
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+                    writeFile file: "service.tmp", text: serviceFile
+
+                    sh """
+                        sudo mv service.tmp /etc/systemd/system/${SERVICE_NAME}.service
+                        sudo systemctl daemon-reload
+                        sudo systemctl enable ${SERVICE_NAME}.service
+                    """
+                }
+            }
+        }
+
+        stage('Restart service') {
+            steps {
+                sh """
+                    sudo systemctl restart ${SERVICE_NAME}.service
+                    sudo systemctl status ${SERVICE_NAME}.service --no-pager || true
+                """
             }
         }
     }
 
     post {
         always {
-            echo "🚀 Deploy abgeschlossen: Branch '${env.BRANCH_NAME}' läuft nun auf Port ${PORT}"
+            echo "Build finished for branch ${env.BRANCH_NAME} on port ${PORT}"
         }
     }
 }
