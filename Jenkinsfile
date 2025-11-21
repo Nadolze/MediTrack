@@ -37,7 +37,7 @@ pipeline {
         stage('Build Maven') {
             steps {
                 sh """
-                    mvn -B -DskipTests clean package
+                    mvn -B clean verify
                 """
             }
         }
