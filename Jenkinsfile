@@ -82,6 +82,7 @@ User=root
 ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/app.jar --server.port=${PORT}
 Restart=always
 RestartSec=10
+EnvironmentFile=/opt/meditrack/envs/__BRANCH__.env
 Environment=SPRING_DATASOURCE_URL=jdbc:mysql://82.165.255.70:3306/meditrack?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 Environment=SPRING_DATASOURCE_USERNAME=web_user
 Environment=SPRING_DATASOURCE_PASSWORD=Web_pass123!
