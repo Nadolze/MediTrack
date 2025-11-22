@@ -149,7 +149,7 @@ Das Ziel der Session war, die Abläufe von **MediTrack** zu verstehen und die wi
 
 ### 📸 Visualisierung
 
-<img alt="Eventstorming-Board der MediTrack-Domäne mit Post-Its" src="./Eventstorming_Neu_2.jpg" width="1200">
+<img alt="Eventstorming-Board der MediTrack-Domäne mit Post-Its" src="src/data/images/Eventstorming_Neu_2.jpg" width="1200">
 
 > Die Abbildung zeigt das finale Event-Storming-Board der MediTrack-Domäne mit allen identifizierten Akteuren, Events und Hotspots.
 
