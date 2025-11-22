@@ -11,12 +11,15 @@ pipeline {
         stage('Init / Branch & Service') {
             steps {
                 script {
+                    // Branch-Name (Fallback für normalen Single-Branch-Job)
                     def branchName = env.BRANCH_NAME ?: 'main'
 
+                    // "sicherer" Branch-Name für Dateinamen / Service-Namen
                     env.BRANCH_NAME_SAFE = branchName.replaceAll('[^A-Za-z0-9_-]', '-')
                     env.SERVICE_NAME     = "meditrack-${env.BRANCH_NAME_SAFE}"
                     env.DEPLOY_DIR       = "/opt/${env.SERVICE_NAME}"
 
+                    // Feste Ports für bekannte Branches
                     def staticPorts = [
                         "main"    : 9090,
                         "test"    : 9091,
@@ -44,20 +47,19 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        // Linux / echter Server
+                        // Linux / Server
                         sh 'mvn -B -DskipTests clean package'
                     } else {
-                        // Windows-Jenkins (dein aktuelles Setup)
-                        bat 'mvn -B -DskipTests clean package'
-                        // Falls Maven nicht im PATH ist:
-                        // bat '"C:\\Pfad\\zu\\maven\\bin\\mvn.cmd" -B -DskipTests clean package'
+                        // Windows-Jenkins (lokal) – Maven über den Jenkins-Maven-Installer
+                        bat '"C:\\Users\\micro\\AppData\\Local\\Jenkins\\.jenkins\\tools\\hudson.tasks.Maven_MavenInstallation\\Maven_3.9.11\\bin\\mvn.cmd" -B -DskipTests clean package'
                     }
                 }
             }
         }
 
         stage('Deploy') {
-            when { expression { isUnix() } }  // nur auf Linux ausführen
+            // nur auf Linux deployen
+            when { expression { isUnix() } }
             steps {
                 script {
                     sh """
@@ -70,11 +72,10 @@ pipeline {
         }
 
         stage('Create systemd service') {
-            when { expression { isUnix() } }  // nur auf Linux ausführen
+            // nur auf Linux systemd-Service schreiben
+            when { expression { isUnix() } }
             steps {
                 script {
-
-
                     def serviceFile = """
 [Unit]
 Description=MediTrack Service for ${env.BRANCH_NAME_SAFE}
@@ -103,7 +104,8 @@ WantedBy=multi-user.target
         }
 
         stage('Restart service') {
-            when { expression { isUnix() } }  // nur auf Linux ausführen
+            // nur auf Linux
+            when { expression { isUnix() } }
             steps {
                 sh """
                     sudo systemctl restart ${env.SERVICE_NAME}.service
