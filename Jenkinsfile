@@ -73,7 +73,7 @@ pipeline {
             when { expression { isUnix() } }  // nur auf Linux ausführen
             steps {
                 script {
-                    def dbEnv = readProperties file: 'Database.env'
+
 
                     def serviceFile = """
 [Unit]
@@ -85,11 +85,7 @@ User=root
 ExecStart=/usr/bin/java -jar ${env.DEPLOY_DIR}/app.jar --server.port=${env.PORT}
 Restart=always
 RestartSec=10
-Environment=SPRING_DATASOURCE_URL=${dbEnv.SPRING_DATASOURCE_URL}
-Environment=SPRING_DATASOURCE_USERNAME=${dbEnv.SPRING_DATASOURCE_USERNAME}
-Environment=SPRING_DATASOURCE_PASSWORD=${dbEnv.SPRING_DATASOURCE_PASSWORD}
-Environment=SPRING_JPA_HIBERNATE_DDL_AUTO=${dbEnv.SPRING_JPA_HIBERNATE_DDL_AUTO}
-EnvironmentFile=/opt/meditrack/envs/__BRANCH__.env
+EnvironmentFile=/opt/meditrack/envs/${env.BRANCH_NAME_SAFE}.env
 
 [Install]
 WantedBy=multi-user.target
