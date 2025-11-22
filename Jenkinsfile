@@ -2,83 +2,45 @@ pipeline {
     agent any
 
     environment {
-        // nur einfache Konstanten!
+        // nur einfache Konstanten hier!
         BASE_DYNAMIC_PORT = "9093"
     }
 
     stages {
 
-        stage('Init vars') {
+        stage('Init / Branch & Service') {
             steps {
                 script {
-                    // Branch-Namen bestimmen (bei einfachem Pipeline-Job oft null)
-                    def branch = env.BRANCH_NAME ?: 'main'
-                    env.BRANCH_NAME = branch
+                    // Fallback, falls BRANCH_NAME null ist (kein Multibranch-Job)
+                    def branchName = env.BRANCH_NAME ?: 'main'
 
-                    // branch-sicher machen
-                    env.BRANCH_NAME_SAFE = branch.replaceAll('[^A-Za-z0-9_-]', '-')
+                    // "sicherer" Branch-Name für Dateinamen / Service-Namen
+                    env.BRANCH_NAME_SAFE = branchName.replaceAll('[^A-Za-z0-9_-]', '-')
 
-                    // Servicename & Deploy-Pfad
+                    // Service-Name und Deploy-Verzeichnis
                     env.SERVICE_NAME = "meditrack-${env.BRANCH_NAME_SAFE}"
-                    env.DEPLOY_DIR = "/opt/${env.SERVICE_NAME}"
+                    env.DEPLOY_DIR   = "/opt/${env.SERVICE_NAME}"
 
-                    echo "Init:"
-                    echo "  BRANCH_NAME      = ${env.BRANCH_NAME}"
-                    echo "  BRANCH_NAME_SAFE = ${env.BRANCH_NAME_SAFE}"
-                    echo "  SERVICE_NAME     = ${env.SERVICE_NAME}"
-                    echo "  DEPLOY_DIR       = ${env.DEPLOY_DIR}"
-                }
-            }
-        }
-
-        stage('Assign Port') {
-            steps {
-                script {
-                    // feste Ports für bestimmte Branches
+                    // Port bestimmen
                     def staticPorts = [
-                        "main": 9090,
-                        "test": 9091,
+                        "main"    : 9090,
+                        "test"    : 9091,
                         "features": 9092
                     ]
 
-                    int port
-                    if (staticPorts.containsKey(env.BRANCH_NAME)) {
-                        port = staticPorts[env.BRANCH_NAME]
+                    int p
+                    if (staticPorts.containsKey(branchName)) {
+                        p = staticPorts[branchName]
                     } else {
-                        // dynamische Port-Berechnung
-                        def hash = Math.abs(env.BRANCH_NAME.hashCode())
-                        port = BASE_DYNAMIC_PORT.toInteger() + (hash % 50)
+                        int base = env.BASE_DYNAMIC_PORT.toInteger()
+                        int hash = Math.abs(branchName.hashCode())
+                        p = base + (hash % 50)
                     }
 
-                    env.PORT = port.toString()
+                    env.PORT = "${p}"
                     echo "Assigned PORT = ${env.PORT}"
-                }
-            }
-        }
-
-        stage('Load Jenkins.env') {
-            steps {
-                script {
-                    def filePath = 'Jenkins.env'
-                    if (!fileExists(filePath)) {
-                        error "Jenkins.env nicht gefunden im Workspace. Bitte die Datei neben die Jenkinsfile legen."
-                    }
-
-                    def content = readFile(filePath)
-                    content.split('\n').each { line ->
-                        line = line.trim()
-                        if (!line || line.startsWith('#')) return
-
-                        def idx = line.indexOf('=')
-                        if (idx <= 0) return
-
-                        def key = line.substring(0, idx).trim()
-                        def val = line.substring(idx + 1).trim()
-
-                        // in die Jenkins-Env übernehmen
-                        env[key] = val
-                        echo "Env aus Datei gesetzt: ${key}=****"
-                    }
+                    echo "Service  : ${env.SERVICE_NAME}"
+                    echo "DeployDir: ${env.DEPLOY_DIR}"
                 }
             }
         }
@@ -86,18 +48,19 @@ pipeline {
         stage('Build Maven') {
             steps {
                 sh """
-                  mvn -B -DskipTests clean package
+                    mvn -B -DskipTests clean package
                 """
             }
         }
 
-        stage('Deploy JAR') {
+        stage('Deploy') {
             steps {
                 script {
+                    // JAR nach /opt/<service>/ legen
                     sh """
-                      sudo mkdir -p "${DEPLOY_DIR}"
-                      sudo cp target/*.jar "${DEPLOY_DIR}/app.jar"
-                      sudo chmod +x "${DEPLOY_DIR}/app.jar"
+                        sudo mkdir -p ${env.DEPLOY_DIR}
+                        sudo cp target/*.jar ${env.DEPLOY_DIR}/app.jar
+                        sudo chmod +x ${env.DEPLOY_DIR}/app.jar
                     """
                 }
             }
@@ -106,9 +69,12 @@ pipeline {
         stage('Create systemd service') {
             steps {
                 script {
+                    // Database.env einlesen (liegt im selben Ordner wie Jenkinsfile)
+                    def dbEnv = readProperties file: 'Database.env'
+
                     def serviceFile = """
 [Unit]
-Description=MediTrack Service for ${env.BRANCH_NAME}
+Description=MediTrack Service for ${env.BRANCH_NAME_SAFE}
 After=network.target
 
 [Service]
@@ -116,10 +82,10 @@ User=root
 ExecStart=/usr/bin/java -jar ${env.DEPLOY_DIR}/app.jar --server.port=${env.PORT}
 Restart=always
 RestartSec=10
-Environment=SPRING_DATASOURCE_URL=${env.SPRING_DATASOURCE_URL}
-Environment=SPRING_DATASOURCE_USERNAME=${env.SPRING_DATASOURCE_USERNAME}
-Environment=SPRING_DATASOURCE_PASSWORD=${env.SPRING_DATASOURCE_PASSWORD}
-Environment=SPRING_JPA_HIBERNATE_DDL_AUTO=${env.SPRING_JPA_HIBERNATE_DDL_AUTO}
+Environment=SPRING_DATASOURCE_URL=${dbEnv.SPRING_DATASOURCE_URL}
+Environment=SPRING_DATASOURCE_USERNAME=${dbEnv.SPRING_DATASOURCE_USERNAME}
+Environment=SPRING_DATASOURCE_PASSWORD=${dbEnv.SPRING_DATASOURCE_PASSWORD}
+Environment=SPRING_JPA_HIBERNATE_DDL_AUTO=${dbEnv.SPRING_JPA_HIBERNATE_DDL_AUTO}
 
 [Install]
 WantedBy=multi-user.target
@@ -128,9 +94,9 @@ WantedBy=multi-user.target
                     writeFile file: "service.tmp", text: serviceFile
 
                     sh """
-                      sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.service
-                      sudo systemctl daemon-reload
-                      sudo systemctl enable ${env.SERVICE_NAME}.service
+                        sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.service
+                        sudo systemctl daemon-reload
+                        sudo systemctl enable ${env.SERVICE_NAME}.service
                     """
                 }
             }
@@ -139,8 +105,8 @@ WantedBy=multi-user.target
         stage('Restart service') {
             steps {
                 sh """
-                  sudo systemctl restart ${env.SERVICE_NAME}.service
-                  sudo systemctl status ${env.SERVICE_NAME}.service --no-pager || true
+                    sudo systemctl restart ${env.SERVICE_NAME}.service
+                    sudo systemctl status ${env.SERVICE_NAME}.service --no-pager || true
                 """
             }
         }
@@ -148,7 +114,11 @@ WantedBy=multi-user.target
 
     post {
         always {
-            echo "🏁 Build finished for branch ${env.BRANCH_NAME ?: 'unbekannt'} on port ${env.PORT ?: 'unbekannt'}"
+            script {
+                def branchName = env.BRANCH_NAME ?: 'main'
+                def port       = env.PORT ?: 'unbekannt'
+                echo "🏁 Build finished for branch ${branchName} on port ${port}"
+            }
         }
     }
 }
