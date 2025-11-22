@@ -1,4 +1,4 @@
-package de.meditrack;
+package de.meditrack.model;
 
 import java.time.LocalDate;
 import java.util.UUID;
