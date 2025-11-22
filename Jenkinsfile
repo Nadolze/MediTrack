@@ -87,6 +87,7 @@ Environment=SPRING_DATASOURCE_URL=jdbc:mysql://82.165.255.70:3306/meditrack?useS
 Environment=SPRING_DATASOURCE_USERNAME=web_user
 Environment=SPRING_DATASOURCE_PASSWORD=Web_pass123!
 Environment=SPRING_JPA_HIBERNATE_DDL_AUTO=update
+EnvironmentFile=/opt/meditrack/envs/__BRANCH__.env
 
 [Install]
 WantedBy=multi-user.target
