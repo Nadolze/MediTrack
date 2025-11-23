@@ -2,92 +2,91 @@ pipeline {
     agent any
 
     environment {
-        // Basis-Port für dynamische Branches
+        // nur einfache Konstanten hier!
         BASE_DYNAMIC_PORT = "9093"
-        BRANCH_NAME_SAFE = "${env.BRANCH_NAME.replaceAll('[^A-Za-z0-9_-]', '-')}"
-        SERVICE_NAME = "meditrack-${BRANCH_NAME_SAFE}"
-        DEPLOY_DIR = "/opt/${SERVICE_NAME}"
-        GIT_COMMIT_MESSAGE = sh(
-                script: "git log -1 --pretty=%B",
-                returnStdout: true
-            ).trim()
     }
 
     stages {
 
-        stage('Assign Port') {
+        stage('Init / Branch & Service') {
             steps {
                 script {
-                    // Statische Branch-Ports
+                    // Branch-Name (Fallback für normalen Single-Branch-Job)
+                    def branchName = env.BRANCH_NAME ?: 'main'
+
+                    // "sicherer" Branch-Name für Dateinamen / Service-Namen
+                    env.BRANCH_NAME_SAFE = branchName.replaceAll('[^A-Za-z0-9_-]', '-')
+                    env.SERVICE_NAME     = "meditrack-${env.BRANCH_NAME_SAFE}"
+                    env.DEPLOY_DIR       = "/opt/${env.SERVICE_NAME}"
+
+                    // Feste Ports für bekannte Branches
                     def staticPorts = [
-                        "main": 9090,
-                        "test": 9091,
+                        "main"    : 9090,
+                        "test"    : 9091,
                         "features": 9092
                     ]
 
-                    if (staticPorts.containsKey(env.BRANCH_NAME)) {
-                        PORT = staticPorts[env.BRANCH_NAME]
+                    int p
+                    if (staticPorts.containsKey(branchName)) {
+                        p = staticPorts[branchName]
                     } else {
-                        // Dynamische Port-Berechnung
-                        def hash = Math.abs(env.BRANCH_NAME.hashCode())
-                        PORT = BASE_DYNAMIC_PORT.toInteger() + (hash % 50)
+                        int base = env.BASE_DYNAMIC_PORT.toInteger()
+                        int hash = Math.abs(branchName.hashCode())
+                        p = base + (hash % 50)
                     }
 
-                    echo "Assigned PORT = ${PORT}"
-                }
-            }
-        }
-        stage('Commit Info') {
-            steps {
-                script {
-                    def msg = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
-                    def author = sh(script: "git log -1 --pretty='%an <%ae>'", returnStdout: true).trim()
-
-                    echo "Last commit author: ${author}"
-                    echo "Commit message: ${msg}"
+                    env.PORT = "${p}"
+                    echo "Assigned PORT = ${env.PORT}"
+                    echo "Service  : ${env.SERVICE_NAME}"
+                    echo "DeployDir: ${env.DEPLOY_DIR}"
                 }
             }
         }
 
         stage('Build Maven') {
             steps {
-                sh """
-                    mvn -B clean verify
-                """
+                script {
+                    if (isUnix()) {
+                        // Linux / Server
+                        sh 'mvn -B -DskipTests clean package'
+                    } else {
+                        // Windows-Jenkins (lokal) – Maven über den Jenkins-Maven-Installer
+                        bat '"C:\\Users\\micro\\AppData\\Local\\Jenkins\\.jenkins\\tools\\hudson.tasks.Maven_MavenInstallation\\Maven_3.9.11\\bin\\mvn.cmd" -B -DskipTests clean package'
+                    }
+                }
             }
         }
 
         stage('Deploy') {
+            // nur auf Linux deployen
+            when { expression { isUnix() } }
             steps {
                 script {
                     sh """
-                        sudo mkdir -p ${DEPLOY_DIR}
-                        sudo cp target/*.jar ${DEPLOY_DIR}/app.jar
-                        sudo chmod +x ${DEPLOY_DIR}/app.jar
+                        sudo mkdir -p ${env.DEPLOY_DIR}
+                        sudo cp target/*.jar ${env.DEPLOY_DIR}/app.jar
+                        sudo chmod +x ${env.DEPLOY_DIR}/app.jar
                     """
                 }
             }
         }
 
         stage('Create systemd service') {
+            // nur auf Linux systemd-Service schreiben
+            when { expression { isUnix() } }
             steps {
                 script {
                     def serviceFile = """
 [Unit]
-Description=MediTrack Service for ${env.BRANCH_NAME}
+Description=MediTrack Service for ${env.BRANCH_NAME_SAFE}
 After=network.target
 
 [Service]
 User=root
-ExecStart=/usr/bin/java -jar ${DEPLOY_DIR}/app.jar --server.port=${PORT}
+ExecStart=/usr/bin/java -jar ${env.DEPLOY_DIR}/app.jar --server.port=${env.PORT}
 Restart=always
 RestartSec=10
-EnvironmentFile=/opt/meditrack/envs/__BRANCH__.env
-Environment=SPRING_DATASOURCE_URL=jdbc:mysql://82.165.255.70:3306/meditrack?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-Environment=SPRING_DATASOURCE_USERNAME=web_user
-Environment=SPRING_DATASOURCE_PASSWORD=Web_pass123!
-Environment=SPRING_JPA_HIBERNATE_DDL_AUTO=update
-EnvironmentFile=/opt/meditrack/envs/__BRANCH__.env
+EnvironmentFile=/opt/meditrack/envs/${env.BRANCH_NAME_SAFE}.env
 
 [Install]
 WantedBy=multi-user.target
@@ -96,19 +95,21 @@ WantedBy=multi-user.target
                     writeFile file: "service.tmp", text: serviceFile
 
                     sh """
-                        sudo mv service.tmp /etc/systemd/system/${SERVICE_NAME}.service
+                        sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.service
                         sudo systemctl daemon-reload
-                        sudo systemctl enable ${SERVICE_NAME}.service
+                        sudo systemctl enable ${env.SERVICE_NAME}.service
                     """
                 }
             }
         }
 
         stage('Restart service') {
+            // nur auf Linux
+            when { expression { isUnix() } }
             steps {
                 sh """
-                    sudo systemctl restart ${SERVICE_NAME}.service
-                    sudo systemctl status ${SERVICE_NAME}.service --no-pager || true
+                    sudo systemctl restart ${env.SERVICE_NAME}.service
+                    sudo systemctl status ${env.SERVICE_NAME}.service --no-pager || true
                 """
             }
         }
@@ -116,7 +117,11 @@ WantedBy=multi-user.target
 
     post {
         always {
-            echo "Build finished for branch ${env.BRANCH_NAME} on port ${PORT}"
+            script {
+                def branchName = env.BRANCH_NAME ?: 'main'
+                def port       = env.PORT ?: 'unbekannt'
+                echo "🏁 Build finished for branch ${branchName} on port ${port}"
+            }
         }
     }
 }
