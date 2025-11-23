@@ -48,10 +48,12 @@ pipeline {
                 script {
                     if (isUnix()) {
                         // Linux / Server
-                        sh 'mvn -B -DskipTests clean package'
+                        sh 'mvn -B clean verify'
                     } else {
-                        // Windows-Jenkins (lokal) – Maven über den Jenkins-Maven-Installer
-                        bat '"C:\\Users\\micro\\AppData\\Local\\Jenkins\\.jenkins\\tools\\hudson.tasks.Maven_MavenInstallation\\Maven_3.9.11\\bin\\mvn.cmd" -B -DskipTests clean package'
+                        // Windows-Jenkins (dein aktuelles Setup)
+                        bat 'mvn -B -DskipTests clean package'
+                        // Falls Maven nicht im PATH ist:
+                        // bat '"C:\\Pfad\\zu\\maven\\bin\\mvn.cmd" -B -DskipTests clean package'
                     }
                 }
             }
