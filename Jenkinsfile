@@ -48,7 +48,7 @@ pipeline {
                 script {
                     if (isUnix()) {
                         // Linux / Server
-                        sh 'mvn -B -DskipTests clean package'
+                        sh 'mvn333 -B -DskipTests clean package'
                     } else {
                         // Windows-Jenkins (lokal) – Maven über den Jenkins-Maven-Installer
                         bat '"C:\\Users\\micro\\AppData\\Local\\Jenkins\\.jenkins\\tools\\hudson.tasks.Maven_MavenInstallation\\Maven_3.9.11\\bin\\mvn.cmd" -B -DskipTests clean package'
@@ -95,7 +95,7 @@ WantedBy=multi-user.target
                     writeFile file: "service.tmp", text: serviceFile
 
                     sh """
-                        sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.serviceXXX
+                        sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.service
                         sudo systemctl daemon-reload
                         sudo systemctl enable ${env.SERVICE_NAME}.service
                     """
