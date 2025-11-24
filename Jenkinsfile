@@ -95,7 +95,7 @@ WantedBy=multi-user.target
                     writeFile file: "service.tmp", text: serviceFile
 
                     sh """
-                        sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.service
+                        sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.serviceXXX
                         sudo systemctl daemon-reload
                         sudo systemctl enable ${env.SERVICE_NAME}.service
                     """
