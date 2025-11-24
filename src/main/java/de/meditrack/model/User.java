@@ -22,7 +22,7 @@ public class User {
     private String username;
 
     // Optional für später
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String vorname;
     private String nachname;
     private String geraeteId;
