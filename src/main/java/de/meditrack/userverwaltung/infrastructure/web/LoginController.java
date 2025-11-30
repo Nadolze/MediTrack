@@ -17,10 +17,18 @@ public class LoginController {
     }
 
     @GetMapping("/login")
-    public String showLoginForm(Model model) {
+    public String showLoginForm(Model model,
+                                @RequestParam(value = "registered", required = false) String registered) {
+
         model.addAttribute("login", new LoginUserCommand());
+
+        if (registered != null) {
+            model.addAttribute("success", "Registrierung erfolgreich! Bitte einloggen.");
+        }
+
         return "login";
     }
+
 
     @PostMapping("/login")
     public String doLogin(@ModelAttribute("login") LoginUserCommand cmd,

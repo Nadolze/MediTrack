@@ -24,18 +24,17 @@ public class RegistrationController {
 
 
     @PostMapping("/register")
-    public String register(
-            @ModelAttribute("user") RegisterUserCommand cmd,
-            Model model) {
+    public String register(@ModelAttribute("user") RegisterUserCommand cmd, Model model) {
 
         try {
             registerUserService.register(cmd);
-            model.addAttribute("success", "Registrierung erfolgreich!");
-            model.addAttribute("user", new RegisterUserCommand());
         } catch (Exception e) {
             model.addAttribute("error", e.getMessage());
+            return "register";
         }
 
-        return "register";
+        // SUCCESS → Loginseite mit Hinweis anzeigen
+        return "redirect:/login?registered";
     }
+
 }
