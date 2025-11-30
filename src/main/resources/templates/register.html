@@ -1,53 +1,104 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>Registrierung</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background-color: #f8f9fa;
-    }
-    .card {
-      max-width: 500px;
-      margin: 50px auto;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0px 5px 15px rgba(0,0,0,0.1);
-    }
-    .alert {
-      margin-top: 15px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Registrieren – MediTrack</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-<div class="card">
-  <h3 class="text-center mb-4">Registrieren</h3>
 
-  <!-- Fehlermeldung -->
-  <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+<body class="bg-light">
 
-  <!-- Erfolgsmeldung -->
-  <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
 
-  <form th:action="@{/register}" th:object="${user}" method="post">
-    <div class="mb-3">
-      <label for="username" class="form-label">Benutzername</label>
-      <input type="text" id="username" th:field="*{username}" class="form-control" placeholder="Ihr Benutzername" required>
+            <div class="card shadow-sm">
+                <div class="card-body">
+
+                    <h3 class="text-center mb-4">Registrieren</h3>
+
+                    <!-- Fehlermeldung -->
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+                    <!-- Erfolgsmeldung -->
+                    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+                    <form th:action="@{/register}" th:object="${user}" method="post">
+
+                        <!-- ROLE Auswahl -->
+                        <div class="mb-3">
+                            <label class="form-label d-block">Registrieren als:</label>
+
+                            <div class="btn-group" role="group">
+                                <input type="radio" class="btn-check"
+                                       id="roleArzt" value="ARZT" th:field="*{role}">
+                                <label class="btn btn-outline-primary" for="roleArzt">Arzt</label>
+
+                                <input type="radio" class="btn-check"
+                                       id="rolePatient" value="PATIENT" th:field="*{role}">
+                                <label class="btn btn-outline-primary" for="rolePatient">Patient</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Benutzername</label>
+                            <input type="text" id="username" class="form-control"
+                                   th:field="*{username}" placeholder="Ihr Benutzername" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">E-Mail</label>
+                            <input type="email" id="email" class="form-control"
+                                   th:field="*{email}" placeholder="name@example.com" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="vorname" class="form-label">Vorname</label>
+                            <input type="text" id="vorname" class="form-control"
+                                   th:field="*{vorname}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="nachname" class="form-label">Nachname</label>
+                            <input type="text" id="nachname" class="form-control"
+                                   th:field="*{nachname}">
+                        </div>
+
+                        <!-- Geburtsdatum nur für Patienten -->
+                        <div class="mb-3"
+                             th:if="${user.role} == 'PATIENT'">
+                            <label for="geburtsdatum" class="form-label">Geburtsdatum</label>
+                            <input type="date" id="geburtsdatum" class="form-control"
+                                   th:field="*{geburtsdatum}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Passwort</label>
+                            <input type="password" id="password" class="form-control"
+                                   th:field="*{password}"
+                                   placeholder="Mindestens 8 Zeichen" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            Registrieren
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <a href="/login">Bereits registriert? Einloggen</a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
     </div>
-    <div class="mb-3">
-      <label for="email" class="form-label">E-Mail</label>
-      <input type="email" id="email" th:field="*{email}" class="form-control" placeholder="name@example.com" required>
-    </div>
-    <div class="mb-3">
-      <label for="password" class="form-label">Passwort</label>
-      <input type="password" id="password" th:field="*{password}" class="form-control" placeholder="Mindestens 8 Zeichen, Groß+Klein, Zahl, Sonderzeichen" required>
-    </div>
-    <button type="submit" class="btn btn-primary w-100">Registrieren</button>
-  </form>
-
-  <div class="text-center mt-3">
-    <a href="/login">Bereits registriert? Einloggen</a>
-  </div>
 </div>
+
+<!-- Bootstrap Script -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>
