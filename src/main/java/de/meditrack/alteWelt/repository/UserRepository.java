@@ -1,6 +1,6 @@
-package de.meditrack.repository;
+package de.meditrack.alteWelt.repository;
 
-import de.meditrack.model.User;
+import de.meditrack.backend.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

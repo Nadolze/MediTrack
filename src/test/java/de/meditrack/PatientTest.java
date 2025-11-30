@@ -1,6 +1,6 @@
 package de.meditrack;
 
-import de.meditrack.model.Patient;
+import de.meditrack.backend.Patient;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import java.time.LocalDate;

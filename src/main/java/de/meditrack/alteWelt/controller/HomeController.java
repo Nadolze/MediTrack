@@ -1,6 +1,6 @@
-package de.meditrack.controller;
+package de.meditrack.alteWelt.controller;
 
-import de.meditrack.model.User;
+import de.meditrack.backend.User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;

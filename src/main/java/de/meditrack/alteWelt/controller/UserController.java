@@ -1,7 +1,7 @@
-package de.meditrack.controller;
+package de.meditrack.alteWelt.controller;
 
-import de.meditrack.model.User;
-import de.meditrack.repository.UserRepository;
+import de.meditrack.backend.User;
+import de.meditrack.alteWelt.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
