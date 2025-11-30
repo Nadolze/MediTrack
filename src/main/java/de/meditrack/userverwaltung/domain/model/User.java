@@ -2,6 +2,7 @@ package de.meditrack.userverwaltung.domain.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
@@ -9,6 +10,7 @@ import lombok.Setter;
 @Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @Setter
+@NoArgsConstructor  // wichtig für JPA
 public abstract class User {
 
     @Id
@@ -19,10 +21,10 @@ public abstract class User {
     private String email;
 
     @Column(nullable = false)
-    private String username;
-
-    @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false, unique = true)
+    private String username;
 
     @Column(nullable = false)
     private String vorname;
@@ -31,4 +33,20 @@ public abstract class User {
 
     @Enumerated(EnumType.STRING)
     private UserRole role;
+
+    // ✔ der Konstruktor, den Patient & Arzt verwenden
+    protected User(String email,
+                   String password,
+                   String username,
+                   String vorname,
+                   String nachname,
+                   UserRole role)
+    {
+        this.email = email;
+        this.password = password;
+        this.username = username;
+        this.vorname = vorname;
+        this.nachname = nachname;
+        this.role = role;
+    }
 }

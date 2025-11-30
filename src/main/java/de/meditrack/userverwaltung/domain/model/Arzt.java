@@ -7,14 +7,18 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "doctors")
+@Table(name = "arzt")
 @Getter
 @Setter
 @NoArgsConstructor
 public class Arzt extends User {
-    public void addPatient(Patient patient) {
-        if (patient == null) throw new IllegalArgumentException("Patient darf nicht null sein");
-        patient.assignToDoctor(this);
-    }
 
+    public Arzt(String email,
+                String password,
+                String username,
+                String vorname,
+                String nachname)
+    {
+        super(email, password, username, vorname, nachname, UserRole.ARZT);
+    }
 }
