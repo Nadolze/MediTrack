@@ -1,0 +1,32 @@
+Derzeit:
+1.
+BC: Benutzerverwaltung
+E: Patient, Arzt, User
+V: Registierung und Anmeldung Arzt und Patient
+BCB: Voraussetzung für BCs Stammdatenerfassung
+Events:
+
+2.
+BC: Stammdatenerfassung
+V: Erfassen und Verwalten persönlicher Daten Patient, Erfassen Fachgebiet Arzt
+BCB: Patient - Benutzerverwaltung; Arzt - Benutzerverwaltung
+
+3.
+BC: Arztzuweisung
+V: Zuordnung von Arzt zu Patient und Fachgebiet
+BCB: Patient-Stammdaten, Voraussetzung Monitoring?
+
+4.
+BC: Krankheitshistorie (Patient hat nur 1 Krankheit, dessen Verlauf dokumentiert wird)
+V: Dokumentation von Krankheitsverläufen und bisherigen Behandlungen
+BCB: Baut auf Stammdaten und Zuweisungen auf
+
+5.
+BC: Erfassung Werte
+V: Erfassung, Speicherung, Zuordnung und Prüfen von Vitalwerten
+BCB: Patient, Krankheitshistorie
+
+6.
+BC: Alarmsystem
+V: Erkennen kritischer Vitalwerte und Benachrichtigung von Patient und Arzt über Patient
+BCB: Referenzierte Vitalwerte
