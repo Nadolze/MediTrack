@@ -25,6 +25,12 @@ public class Patient extends User {
                    LocalDate geburtsdatum)
     {
         super(email, password, username, vorname, nachname, UserRole.PATIENT);
+
+        if (geburtsdatum != null && geburtsdatum.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Geburtsdatum darf nicht in der Zukunft liegen.");
+        }
+
         this.geburtsdatum = geburtsdatum;
     }
+
 }
