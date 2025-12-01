@@ -1,515 +1,378 @@
-# MediTrack
-
-**MediTrack** ist ein Projekt zur **Verwaltung und Überwachung von Patientendaten** (einschließlich Vitaldaten und Behandlungshistorie) mit automatischen **Benachrichtigungen bei kritischen Werten**. Dieses Dokument dient **ausschließlich der Orientierung und Formatierung**. Inhalte, technische Details und Umsetzungen werden **im Verlauf des Projekts fortlaufend angepasst und konkretisiert.**
-
----
-
 # 🩺 MediTrack 
+ReadMe in der Anpassung, Update folgt. Ordner werden gerade angepasst und erste Klassen implementiert. 
 
-(dieser Abschnitt gehört dann in die neue ReadMe die dann nicht mehr nach den Übungen, sondern nach Projekt an sich gegliedert ist)
+**Hauptordner (alt):**<br />
+MediTrack/src/main/java/ **de.meditrack** => veraltet<br />
+MediTrack/src/test/java/ **de.meditrack** => veraltet<br />
+<br />
+**Hauptordner (neu):**<br />
+MediTrack/src/main/java/ **com**.meditrack**<br />
+MediTrack/src/test/java/ **com.meditrack**<br />
 
-![Java CI with Maven](https://github.com/Nadolze/MediTrack/actions/workflows/maven-tests.yml/badge.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
+![Java CI with Maven](https://github.com/Nadolze/MediTrack/actions/workflows/maven-tests.yml/badge.svg)  
+![License](https://img.shields.io/badge/license-MIT-blue.svg)  
 ![Java](https://img.shields.io/badge/Java-21-orange.svg)
 
-> Automatisierte Build- und Testpipeline mit **GitHub Actions (CI/CD)**  
-> führt bei jedem Push `mvn clean test` aus und überprüft alle Unit-Tests.
+**MediTrack** ist ein Projekt zur **Verwaltung und Überwachung von Patientendaten**  
+(Vitaldaten, Behandlungen, Geräte und Alerts) mit automatischen  
+**Benachrichtigungen bei kritischen Werten**.
+
+Dieses Dokument beschreibt das **Projekt MediTrack** – unabhängig von den
+Übungsblättern – und fasst Architektur, Domäne und Deployment zusammen.
 
 ---
 
 ## 📋 Projektübersicht
 
-**Ziel:**  
-Ein System, das Patientendaten sicher verwaltet, Vitalwerte überwacht und bei kritischen Schwellen automatisch medizinisches Personal informiert.
+**Ziel**
 
-**Kernfunktionen (MVP):**
-- Patientenregistrierung & Authentifizierung (mit Rollen)
-- Verwaltung von Stammdaten (Name, Geburtsdatum, Krankengeschichte)
-- Eingabe und Anzeige von Vitalwerten (Blutdruck, Puls, Temperatur)
-- Automatisches Benachrichtigungssystem bei kritischen Werten
-- Behandlungsübersicht mit Historie
+Ein System, das
+
+- Patientendaten sicher verwaltet,
+- Vitalwerte überwacht,
+- medizinische Geräte und Behandlungen nachverfolgt,
+- und bei kritischen Schwellen automatisch medizinisches Personal informiert.
+
+**Kernfunktionen (MVP)**
+
+- Registrierung & Login (Rollen: Patient, Arzt)
+- Verwaltung von Stammdaten (Name, Geburtsdatum, Historie)
+- Eingabe und Anzeige von Vitalwerten (Puls, Blutdruck, Temperatur, SpO₂ …)
+- Automatisches Benachrichtigungssystem bei kritischen Werten (Alerts)
+- Behandlungsübersicht mit Historie (Treatments)
+- Zuordnung von Geräten zu Patienten (Devices)
 
 ---
 
 ## 👥 Team 2 – MediTrack
 
-| Name                   | E-Mail                                   | Discord         |
-|------------------------|------------------------------------------|-----------------|
-| Konstantin Königshofen | ***						                 | konstantink4120 |
-| Timo Nadolny           | ***                                      | nadolzetimo     |
-| Marcell Wolf de Lêu    | ***                                      | wolfdeleu       |
-| Ferdinand Stadler      | ***                                      | ferdi_29858     |
+| Name                   | E-Mail (intern) | Discord           |
+|------------------------|-----------------|-------------------|
+| Konstantin Königshofen | –               | `konstantink4120` |
+| Timo Nadolny           | –               | `nadolzetimo`     |
+| Marcell Wolf de Lêu    | –               | `wolfdeleu`       |
+| Ferdinand Stadler      | –               | `ferdi_29858`     |
+
+*(E-Mails werden im öffentlichen Repo nicht hinterlegt.)*
 
 ---
 
-## 🧱 Projektstruktur (Vorschlag)
+## 🖥️ Technologie-Stack
 
-### 🖥️ Technologie-Stack
-...
+- **Sprache:** Java 17+
+- **Framework:** Spring Boot 3 (Web, Data JPA, Validation, Thymeleaf)
+- **Datenbanken**
+    - lokal: H2 (In-Memory / File)
+    - Server: MySQL
+- **Build-Tool:** Maven
+- **Tests:** JUnit 5
+- **CI/CD**
+    - GitHub Actions (Maven-Build & Tests)
+    - Jenkins + systemd (Deployment auf Linux-Server)
+- **Frontend:** Thymeleaf-Templates, Bootstrap/CSS (klassische Server-Rendering-Ansicht)
 
-### 🗂️ Repository-Struktur
+---
+
+## 🗂️ Repository-Struktur (vereinfacht)
 
 ```plaintext
 MediTrack/
 ├── .github/
 │   └── workflows/
-│       └── maven-tests.yml
-│
-├── .gitignore
-│
-├── .idea/
-│
-├── Jenkinsfile
-│
-├── README.md                  (ToDo: Projekt-README ohne Übungsdetails, nur Projektinhalte)
-│
-├── Uebungen/
-│   ├── README.md              (ToDo: aufräumen und nur Übungsaufgaben rein nehmen)
-│   ├── Uebung1/
-│   │   └── 1-Uebung.pdf
-│   ├── Uebung2/
-│   │   └── 2-Uebung.pdf
-│   ├── Uebung3/
-│   │   └── 3-Uebung.pdf
-│   ├── Uebung4/
-│   │   └── 4-Uebung.pdf
-│   ├── Uebung5/
-│   │   └── 5-Uebung.pdf
-│   ├── src/
-│   │   └── images/
-│   └── 3-Uebung-MediTrack.pdf
-│
-├── pom.xml
-│
+│       └── maven-tests.yml       # GitHub Actions: mvn clean test
 ├── src/
 │   ├── main/
 │   │   ├── java/
-│   │   │   └── com/
+│   │   │   └── de/
 │   │   │       └── meditrack/
-│   │   │           ├── alerts/
-│   │   │           │   ├── api/
-│   │   │           │   ├── application/
-│   │   │           │   │   ├── dto/
-│   │   │           │   │   ├── handler/
-│   │   │           │   │   └── service/
-│   │   │           │   ├── domain/
-│   │   │           │   │   ├── entity/
-│   │   │           │   │   ├── events/
-│   │   │           │   │   ├── repository/
-│   │   │           │   │   ├── service/
-│   │   │           │   │   └── valueobject/
-│   │   │           │   └── infrastructure/
-│   │   │           │       ├── adapter/
-│   │   │           │       ├── notifications/
-│   │   │           │       └── persistence/
-│   │   │           │
-│   │   │           ├── assignment/
-│   │   │           │   ├── api/
-│   │   │           │   ├── application/
-│   │   │           │   │   ├── command/
-│   │   │           │   │   ├── dto/
-│   │   │           │   │   └── service/
-│   │   │           │   ├── domain/
-│   │   │           │   │   ├── entity/
-│   │   │           │   │   ├── events/
-│   │   │           │   │   ├── repository/
-│   │   │           │   │   └── service/
-│   │   │           │   └── infrastructure/
-│   │   │           │       ├── adapter/
-│   │   │           │       └── persistence/
-│   │   │           │
-│   │   │           ├── coredata/
-│   │   │           │   ├── api/
-│   │   │           │   ├── application/
-│   │   │           │   │   ├── command/
-│   │   │           │   │   ├── dto/
-│   │   │           │   │   └── service/
-│   │   │           │   ├── domain/
-│   │   │           │   │   ├── entity/
-│   │   │           │   │   ├── repository/
-│   │   │           │   │   ├── service/
-│   │   │           │   │   └── valueobject/
-│   │   │           │   └── infrastructure/
-│   │   │           │       ├── config/
-│   │   │           │       └── persistence/
-│   │   │           │
-│   │   │           ├── history/
-│   │   │           │   ├── api/
-│   │   │           │   ├── application/
-│   │   │           │   │   ├── command/
-│   │   │           │   │   ├── dto/
-│   │   │           │   │   ├── query/
-│   │   │           │   │   └── service/
-│   │   │           │   ├── domain/
-│   │   │           │   │   ├── entity/
-│   │   │           │   │   ├── events/
-│   │   │           │   │   ├── repository/
-│   │   │           │   │   └── service/
-│   │   │           │   └── infrastructure/
-│   │   │           │       ├── adapter/
-│   │   │           │       ├── persistence/
-│   │   │           │       └── projections/
-│   │   │           │
-│   │   │           ├── shared/
-│   │   │           │   ├── exception/
-│   │   │           │   └── valueobject/
-│   │   │           │
-│   │   │           ├── user/
-│   │   │           │   ├── api/
-│   │   │           │   ├── application/
-│   │   │           │   │   ├── command/
-│   │   │           │   │   ├── dto/
-│   │   │           │   │   └── service/
-│   │   │           │   ├── domain/
-│   │   │           │   │   ├── entity/
-│   │   │           │   │   ├── repository/
-│   │   │           │   │   ├── service/
-│   │   │           │   │   └── valueobject/
-│   │   │           │   └── infrastructure/
-│   │   │           │       ├── config/
-│   │   │           │       └── persistence/
-│   │   │           │
-│   │   │           └── vitals/
-│   │   │               ├── api/
-│   │   │               ├── application/
-│   │   │               │   ├── command/
-│   │   │               │   ├── dto/
-│   │   │               │   └── service/
-│   │   │               ├── domain/
-│   │   │               │   ├── entity/
-│   │   │               │   ├── events/
-│   │   │               │   ├── repository/
-│   │   │               │   ├── service/
-│   │   │               │   └── valueobject/
-│   │   │               └── infrastructure/
-│   │   │                   ├── persistence/
-│   │   │                   └── scheduler/
-│   │   │
+│   │   │           ├── controller/   # Web-Controller (Spring MVC)
+│   │   │           ├── model/        # Entitäten (User, Patient, Doctor, ...)
+│   │   │           ├── repository/   # Spring-Data-Repositories
+│   │   │           └── MediTrackApplication.java
 │   │   └── resources/
+│   │       ├── templates/           # Thymeleaf HTML-Views
 │   │       └── application.properties
-│
-└── target/
-    └── classes/
-        ├── META-INF/
-        └── application.properties
+│   └── test/
+│       └── java/
+│           └── de/
+│               └── meditrack/       # Unit- und Integrationstests
+├── Uebungen/                        # Kursunterlagen / PDFs (nicht Teil der App)
+├── Jenkinsfile                      # Jenkins-Pipeline (Server & lokal)
+├── README.md                        # dieses Dokument
+└── pom.xml                          # Maven-Konfiguration
 ```
 
----
+## ✅ Funktionale Anforderungen
 
-## ⚙️ Funktionale Anforderungen (aus Aufgabenbeschreibung)
+1. **Registrierung & Login**  
+   - Benutzer können sich registrieren und anmelden.  
+   - Rollen: **Patient** und **Arzt** (später erweiterbar).  
+   - Zugriff auf Funktionen und Daten ist rollenbasiert.
 
-1. **Registrierung & Login** – mit rollenbasierter Authentifizierung (Patient, medizinisches Personal)
-2. **Patientendatenverwaltung** – Eingabe & Änderung grundlegender Daten
-3. **Vitaldaten-Erfassung** – Blutdruck, Puls, Temperatur etc.
-4. **Benachrichtigungssystem** – automatische Alarme bei Schwellenüberschreitungen
-5. **Behandlungsübersicht** – Historie der Behandlungen und Eingriffe
+2. **Patientendatenverwaltung**  
+   - Erfassung und Pflege von Stammdaten (Name, Geburtsdatum, Kontaktinformationen).  
+   - Hinterlegung einer grundlegenden Krankengeschichte.  
+   - Zuordnung eines verantwortlichen Arztes zu einem Patienten.
 
----
+3. **Krankheits- und Behandlungshistorie**  
+   - Anlage von **Krankheiten** (Diagnosen) pro Patient.  
+   - Anlage von **Behandlungen** mit Bezeichnung, Beschreibung, Startdatum und Status (z. B. aktiv/abgeschlossen).  
+   - Anzeige einer chronologischen Historie der Behandlungen je Patient.
+
+4. **Vitaldaten-Erfassung**  
+   - Erfassung von Vitalwerten (z. B. Blutdruck, Puls, Temperatur, SpO₂) mit Zeitstempel und Einheit.  
+   - Anzeige der zuletzt erfassten Vitaldaten je Patient (Liste, später optional grafisch).
+
+5. **Alarmsystem / Benachrichtigungen**  
+   - Definition von **Schwellenwerten** für einzelne Vitalparameter (min/max).  
+   - Automatisches Auslösen eines **Alarms**, wenn ein Wert außerhalb des definierten Bereichs liegt.  
+   - Darstellung offener Alarme für das zuständige medizinische Personal.
+
+6. **Alarmbearbeitung durch Personal**  
+   - Einsicht in alle offenen Alarme der zugewiesenen Patienten.  
+   - Aktualisierung des Alarmstatus (z. B. *neu*, *in Bearbeitung*, *geschlossen*).  
+   - Dokumentation der ergriffenen Maßnahmen direkt am Alarm / in der Behandlung.
+
+7. **Sicherheit & Validierung**  
+   - Patienten sehen ausschließlich ihre eigenen Daten.  
+   - Ärzte sehen nur die ihnen zugeordneten Patienten und deren Daten.  
+   - Formularvalidierung (Pflichtfelder, Wertebereiche, sinnvolle Formate) zur Sicherstellung konsistenter Eingaben.
 
 ## 🎯 Akzeptanzkriterien (MVP)
 
-- **Patientenrolle:** Zugriff nur auf eigene Daten  
-- **Personalrolle:** Zugriff auf zugewiesene Patienten  
-- **Validierung:** Eingaben werden auf Wertebereiche geprüft  
-- **Alerts:** Kritische Werte lösen Benachrichtigung innerhalb von 1 Minute aus  
-- **Historie:** Änderungen versioniert & nachvollziehbar  
+- **Rollen & Zugriff**
+    - Patienten können sich registrieren, anmelden und nur **ihre eigenen Daten** einsehen.
+    - Ärztliches Personal kann sich anmelden und **zugewiesene Patienten** samt deren Daten verwalten.
+    - Unberechtigter Zugriff (z. B. Patient auf fremde Patientenakte) ist nicht möglich.
 
----
+- **Patientendatenverwaltung**
+    - Stammdaten (Name, Geburtsdatum, Kontaktdaten) lassen sich anlegen, ändern und speichern.
+    - Jeder Patient ist eindeutig identifizierbar.
+    - Die Krankengeschichte eines Patienten ist einsehbar und kann erweitert werden.
+
+- **Vitaldaten-Erfassung**
+    - Für einen Patienten können Vitalwerte (z. B. Puls, Blutdruck, Temperatur, SpO₂) mit Zeitstempel erfasst werden.
+    - Ungültige Eingaben (z. B. negative Werte, unmögliche Bereiche) werden abgewiesen und führen zu einer Fehlermeldung.
+    - Die zuletzt erfassten Werte sind pro Patient übersichtlich abrufbar.
+
+- **Alarmsystem**
+    - Für jeden Vitalwert existieren **konfigurierbare Grenzwerte** (min/max).
+    - Wird ein neuer Vitalwert erfasst, prüft das System automatisch, ob ein Grenzwert überschritten wird.
+    - Bei Überschreitung wird automatisch ein **Alarm** erzeugt, der den betroffenen Patienten, den Wert, den Zeitpunkt und den Status enthält.
+    - Alarme haben mindestens die Stati: `NEU`, `IN_BEARBEITUNG`, `GESCHLOSSEN`.
+
+- **Alarmbearbeitung**
+    - Ärztliches Personal sieht eine Liste aller **offenen Alarme** (mindestens Status `NEU`).
+    - Der Status eines Alarms kann geändert werden (z. B. von `NEU` → `IN_BEARBEITUNG` → `GESCHLOSSEN`).
+    - Eine kurze Notiz / Maßnahme kann am Alarm hinterlegt werden.
+
+- **Behandlungsübersicht**
+    - Zu einem Patienten können **Behandlungen** angelegt werden (Name, Beschreibung, Startdatum, optional Enddatum).
+    - Behandlungen sind mit Patient und – optional – mit einem Arzt verknüpft.
+    - Abschlossene Behandlungen sind als solche erkennbar und bleiben in der Historie sichtbar.
+
+- **Systemqualität**
+    - Zentrale Use-Cases (Login, Patientenanzeige, Vitalwert-Erfassung, Alarm-Anzeige) sind automatisiert getestet.
+    - Die Anwendung startet ohne Fehlermeldungen und ist über den konfigurierten Port (z. B. `http://localhost:9090`) erreichbar.
+    - Bei fehlerhaften Eingaben werden Nutzer verständlich informiert (kein technischer Stacktrace im Browser).
+
 
 ## 🧩 Eventstorming
 
-> *Event Storming* ist eine Methode, um zwischen **Entwicklern** und **Domain-Experten** ein gemeinsames Verständnis über die Domäne und deren Prozesse zu schaffen.  
-> Dabei werden die wichtigsten Ereignisse (Events) und deren Auslöser visuell dargestellt.
+> *Event Storming* ist eine Methode, um zwischen **Entwicklern** und  
+> **Domain-Experten** ein gemeinsames Verständnis über die Domäne  
+> und deren Prozesse zu schaffen. Dabei werden die wichtigsten  
+> Ereignisse (Events) und deren Auslöser visuell dargestellt.
 
 ### 🧠 Legende
-- 🟧 **Domain Event** – beschreibt eine fachliche Veränderung im System (z. B. *Patient hat Vitaldaten eingegeben*)
+
+- 🟧 **Domain Event** – fachliche Veränderung im System  
+  (z. B. *PatientRegistriert*, *VitaldatenErfasst*, *AlarmAusgelöst*)
+- 🟨 **Actor** – Akteur (z. B. Patient, Arzt, System)
 - 🟥 **Hot Spot** – offener Punkt, Problem oder Diskussionsbedarf
-- 🟨 **Actor** – Akteur (z. B. Patient, medizinisches Personal)
 
----
+### 🎯 Ziel der Session
 
-### 🎯 Ziel
-Das Ziel der Session war, die Abläufe von **MediTrack** zu verstehen und die wichtigsten Ereignisse zu identifizieren – von der Registrierung bis zur Benachrichtigung bei kritischen Vitalwerten.
-
----
+Ziel der Eventstorming-Session war es, die Abläufe von **MediTrack**  
+zu verstehen und die wichtigsten Ereignisse zu identifizieren –  
+von der Registrierung über die Erfassung von Vitaldaten bis zur  
+Benachrichtigung des medizinischen Personals bei kritischen Werten.
 
 ### 🧩 Hauptakteure
-| Akteur | Beschreibung |
-|:--|:--|
-| 🧍‍♂️ **Patient** | Gibt Gesundheits- und Vitaldaten ein, ruft Verlauf ab |
-| 🩺 **Personal** | Prüft Daten, ergänzt Behandlungen, verwaltet Profile |
-| ⚙️ **System** | Erkennt Trends und kritische Werte, löst Benachrichtigungen aus |
 
----
+| Akteur  | Beschreibung                                            |
+|--------|----------------------------------------------------------|
+| 🧍‍♂️ Patient | Gibt Gesundheits- und Vitaldaten ein, sieht Verlauf    |
+| 🩺 Arzt    | Prüft Daten, ergänzt Behandlungen, reagiert auf Alarme |
+| ⚙️ System  | Speichert Daten, prüft Schwellenwerte, löst Alarme aus |
 
 ### 🔄 Beispielhafter Ablauf (vereinfacht)
-[Patient registriert] → [Patient erfasst Gesundheitsdaten] → [Patient gibt Vitaldaten ein] → [System erkennt kritischen Wert] → [Benachrichtigung an Personal] → [Personal prüft / reagiert] → [Behandlung hinzugefügt]
 
----
+1. **PatientRegistriert**
+2. **PatientGibtGesundheitsdatenEin**
+3. **VitaldatenErfasst**
+4. **SystemPrüftSchwellenwerte**
+5. **AlarmAusgelöst** bei kritischem Wert
+6. **ArztBenachrichtigt**
+7. **BehandlungAktualisiert** / neue Behandlung angelegt
 
-### 📸 Visualisierung
+### 📸 Visualisierung des Eventstormings
 
-<img alt="Eventstorming-Board der MediTrack-Domäne mit Post-Its" src="src/data/images/Eventstorming_Neu_2.jpg" width="1200">
+Im Repository ist ein Bild des finalen Eventstorming-Boards hinterlegt:
 
-> Die Abbildung zeigt das finale Event-Storming-Board der MediTrack-Domäne mit allen identifizierten Akteuren, Events und Hotspots.
+![Eventstorming MediTrack](src/data/images/Eventstorming_Neu_2.jpg)
 
----
-## 🧩 Domänenmodell (Entwurf nach UML)
+Es zeigt:
+
+- alle identifizierten **Events** (z. B. *PatientRegistriert*,  
+  *VitaldatenErfasst*, *AlarmAusgelöst*),
+- beteiligte **Akteure** (Patient, Arzt, System),
+- markierte **Hotspots**, an denen noch fachliche oder technische  
+  Fragen geklärt werden müssen.
+
+Dieses Board dient als lebende Grundlage für das **Domänenmodell**,  
+die **UML-Klassendiagramme** und die spätere Implementierung.
+
+
+## 🧩 Domänenmodell (UML)
+
+Das Domänenmodell von **MediTrack** bildet die wichtigsten Entitäten und ihre Beziehungen ab.  
+Im Fokus stehen Patienten, Ärzte, Geräte, Vitaldaten, Behandlungen und Alarme.
 
 ```mermaid
----
-config:
-  layout: dagre
----
 classDiagram
 direction BT
-    class Patient {
-	    geburtsdatum: date
-	    krankengeschichte: krankheit
-    }
-    class Arzt {
-	    personalnummer: int
-	    name: string
-    }
-    class Krankheit {
-	    name: string
-	    nummer: int
-	    behandlung: Behandlung
-    }
-    class Behandlung {
-	    name: string
-	    beschreibung: string
-	    anfangsdatum: date
-	    vitalwerte: Vitalreading
-	    abgeschlossen: boolean
-    }
+
     class User {
-	    id int
-	    name string
-	    email string
+        +id: int
+        +name: string
+        +email: string
+        +passwordHash: string
+        +role: string
     }
+
+    class Patient {
+        +geburtsdatum: date
+        +krankengeschichte: string
+    }
+
+    class Arzt {
+        +personalnummer: int
+        +name: string
+    }
+
+    class Krankheit {
+        +name: string
+        +nummer: int
+    }
+
+    class Behandlung {
+        +name: string
+        +beschreibung: string
+        +anfangsdatum: date
+        +abgeschlossen: boolean
+    }
+
     class Vitalreading {
-	    id: int
-	    timestamp: datetime
-	    typ: string
-	    wert: float
-	    einheit: string
+        +id: int
+        +timestamp: datetime
+        +typ: string
+        +wert: float
+        +einheit: string
     }
+
     class Alarm {
-	    id: int
-	    zeitpunkt: datetime
-	    status: string
+        +id: int
+        +zeitpunkt: datetime
+        +status: string
     }
+
     class Alarmeinstellungen {
-	    id: int
-	    wert_name: string
-	    wert_min: float
-	    wert_max: float
+        +id: int
+        +wert_name: string
+        +wert_min: float
+        +wert_max: float
     }
 
     Patient --|> User
-    Arzt --|> User
+    Arzt    --|> User
+
     Arzt --> Patient : betreut
     Patient --> Krankheit : hat
     Arzt --> Krankheit : diagnostiziert
     Behandlung --> Krankheit : behandelt
+    Patient --> Behandlung : erhält
     Vitalreading --> Behandlung : trackt
-    Vitalreading -- Alarm : löst aus
-    Alarm -- Arzt : informiert
-    Alarm -- Patient : informiert
+    Vitalreading --> Alarm : löstAus
+    Alarm --> Arzt : informiert
+    Alarm --> Patient : betrifft
     Alarmeinstellungen --|> Alarm
-    Arzt -- Alarmeinstellungen : definiert
-
+    Arzt --> Alarmeinstellungen : definiert
 ```
----
 
-## 🧩 Bounded Context
+### Wichtige Entitäten
 
-> Ein *Bounded Context* ist ein klar abgegrenzter Teil einer Software,  
-> der **eigene Regeln, Strategien und eine eigene Fachsprache (Ubiquitous Language)** besitzt.  
-> Domains oder Subdomains können mehrere Bounded Contexts enthalten –  
-> jedoch sollte sich **ein einzelner Bounded Context niemals über mehrere Domains erstrecken.**
+- **User**
+    - Basisklasse für alle Benutzer im System.
+    - Attribute (Auswahl): `userId`, `username`, `passwordHash`, `email`.
+    - Wird von `Patient` und `Doctor` spezialisiert (Vererbung).
 
----
+- **Patient** *(erbt von User)*
+    - Repräsentiert einen Patienten im System.
+    - Attribute (Auswahl): `dateOfBirth`.
+    - Beziehungen:
+        - 1:n zu **Treatment** (ein Patient hat mehrere Behandlungen).
+        - 1:n zu **Alert** (ein Patient kann mehrere Alarme auslösen).
+        - 1:n zu **Device** (ein Patient kann mehrere Geräte besitzen).
+        - n:m zu **Doctor** (ein Patient kann von mehreren Ärzten betreut werden).
 
-### 🧱 Überblick
+- **Doctor** *(erbt von User)*
+    - Repräsentiert medizinisches Personal (z. B. Arzt/Ärztin).
+    - Attribute (Auswahl): `personalNumber`, `specialization`.
+    - Beziehungen:
+        - n:m zu **Patient** (ein Arzt kann mehrere Patienten betreuen und umgekehrt).
 
-| Bounded Context | Verantwortlichkeiten | Beziehung zu anderen BCs |
-|:--|:--|:--|
-| 🧍‍⚕️ **Registrierungsvorgang** | Patienten und medizinisches Personal können sich registrieren und anmelden. | Voraussetzung für alle weiteren Bounded Contexts. |
-| 🧾 **Stammdatenerfassung** | Patienten können persönliche Daten (Name, Geburtsdatum, Krankheitsgeschichte) angeben und verwalten. | Die erfasste Krankheitsgeschichte wird vom BC **„Krankheitshistorie“** genutzt und dort erweitert. |
-| 🧬 **Krankheitshistorie** | Patienten und Ärzte können auf Krankheitsverläufe zugreifen und diese erweitern. | Baut auf den Informationen aus dem BC **„Stammdatenerfassung“** auf. |
-| ❤️ **Erfassung Werte** | Patienten-Vitalwerte werden erfasst, gespeichert und regelmäßig überprüft. | Wenn ein erfasster Wert den Schwellenwert überschreitet, wird das **Alarmsystem** aktiviert. |
-| 🔔 **Alarmsystem / Notification-Center** | Erkennt kritische Vitalwerte und benachrichtigt das zuständige Personal. | Nutzt und überwacht die Daten aus dem BC **„Erfassung Werte“**. |
+- **Device**
+    - Medizingerät, das einem Patienten zugeordnet ist.
+    - Attribute (Auswahl): `deviceId`, `model`, `status`, `lastServiceDate`.
+    - Beziehung:
+        - n:1 zu **Patient** (ein Patient kann mehrere Geräte haben, ein Gerät gehört genau einem Patienten).
 
----
+- **Treatment**
+    - Behandlungs­einheit oder Therapieplan eines Patienten.
+    - Attribute (Auswahl): `treatmentId`, `assessmentDate`, `plannedEndDate`, `active`.
+    - Beziehungen:
+        - n:1 zu **Patient** (jede Behandlung gehört zu genau einem Patienten).
+        - 1:n zu **VitalData** (eine Behandlung umfasst viele Messwerte).
 
-### 💡 Fazit
-Die Aufteilung in klar definierte Bounded Contexts ermöglicht:
-- eine **bessere Entkopplung** der Fachlogik,
-- die **unabhängige Weiterentwicklung** einzelner Bereiche,
-- und die konsequente Anwendung der **DDD-Prinzipien** (Domain Driven Design).  
-  Jeder Kontext bildet damit eine eigene Mini-Domäne innerhalb von **MediTrack**.
+- **VitalData**
+    - Einzelner Vitalwert (Messpunkt) im zeitlichen Verlauf.
+    - Attribute (Auswahl): `heartRate`, `spo2`, `sysBp`, `diaBp`, `temp`, `timestamp`.
+    - Beziehungen:
+        - n:1 zu **Treatment** (Messung gehört zu einer Behandlung).
+        - 0..1:1 zu **Alert** (ein kritischer Messwert kann einen Alarm auslösen).
 
----
+- **Alert**
+    - Repräsentiert einen ausgelösten Alarm bei kritischen Vitalwerten.
+    - Attribute (Auswahl): `alertId`, `alertLevel`, `message`, `createdAt`, `resolved`.
+    - Beziehungen:
+        - n:1 zu **Patient** (Alarm gehört zu einem Patienten).
+        - n:1 zu **VitalData** (Alarm basiert auf einem konkreten Messwert).
 
-## 🧩 Entitäten und Aggregate definieren
+### Kurzfassung
 
-> In **MediTrack** werden zentrale Geschäftsobjekte als **Entitäten** modelliert.  
-> Mehrere Entitäten mit enger fachlicher Verbindung bilden gemeinsam ein **Aggregat**,  
-> das durch eine *Aggregate Root* verwaltet wird.  
-> Diese Struktur sorgt für Datenkonsistenz und klare fachliche Grenzen zwischen den Bereichen.
+- **User** ist die abstrakte Basis für **Patient** und **Doctor**.
+- **Patient** ist die zentrale Entität, der **Behandlungen**, **Geräte**, **Vitaldaten** und **Alarme** zugeordnet sind.
+- **VitalData** wird innerhalb eines **Treatment** erfasst und kann einen **Alert** auslösen.
+- **Doctor** ist über eine n:m-Beziehung mit **Patient** verbunden und reagiert auf ausgelöste Alarme.
 
----
 
-### 🧱 Patientenverwaltung
-- **Entität:** Patient
-- **Aggregate:** Patient
-    - Enthält alle Stammdaten des Patienten wie Name, Geburtsdatum, Kontaktdaten und medizinische Basisinformationen.
-    - Dient als zentrale *Aggregate Root* für abhängige Daten wie Vitalwerte, Behandlungen und Benachrichtigungen.
-
----
-
-### ❤️ Vitaldatenmanagement
-- **Entität:** Vitalwert
-- **Aggregate:** Vitaldaten
-    - Beinhaltet alle Vitalparameter eines Patienten (z. B. Puls, Blutdruck, Temperatur).
-    - Stellt Logik zur Erfassung, Validierung und Schwellenwertprüfung bereit.
-    - Löst bei Überschreitung automatisch Events (z. B. *CriticalValueDetectedEvent*) aus, die im Benachrichtigungssystem verarbeitet werden.
-
----
-
-### 🔔 Benachrichtigungssystem
-- **Entität:** Benachrichtigung / Alarm
-- **Aggregate:** Benachrichtigung
-    - Enthält Informationen über erkannte kritische Werte, deren Status und Zustellungsdetails.
-    - Wird vom *Vitaldaten*-Aggregat ausgelöst und referenziert Patient und medizinisches Personal.
-
----
-
-### 🧾 Behandlungsmanagement
-- **Entität:** Behandlung
-- **Aggregate:** Behandlung
-    - Dokumentiert alle ärztlichen Maßnahmen, Diagnosen und Verlaufseinträge.
-    - Verknüpft Patient und behandelndes Personal.
-    - Dient als Basis für spätere Auswertungen oder Dokumentationen.
-
----
-
-### 👩‍⚕️ Personalverwaltung
-- **Entität:** Benutzer (Arzt, Pflegekraft)
-- **Aggregate:** Personal
-    - Enthält Identitätsdaten, Rollen und Zugriffsrechte.
-    - Kann mehreren Patienten zugeordnet werden und erhält Benachrichtigungen aus dem Notification-Center.
-
----
-
-### 💡 Zusammenfassung
-Jedes Aggregat bildet eine in sich konsistente Einheit innerhalb des Systems.  
-Zwischen den Aggregaten findet die Kommunikation über Domain-Events statt  
-(z. B. *Vitalwert überschreitet Grenzwert → löst Benachrichtigung aus*).
-
----
-
-## ⚙️ Domain Services und Repositories
-
-> **Domain Services** kapseln fachliche Logik, die nicht direkt zu einer Entität gehört.  
-> **Repositories** sind für die Persistenz dieser Entitäten und Aggregate verantwortlich.  
-> Zusammen stellen sie die Schnittstelle zwischen Fachlogik und Datenhaltung dar.
-
----
-
-### 🧠 Domain Services
-
-| Service | Aufgabe | Zugehöriger Bounded Context |
-|:--|:--|:--|
-| 🧍‍⚕️ **PatientenService** | Verwaltung der Patientenstammdaten (Erstellen, Aktualisieren, Löschen, Zuweisung an Ärzte) | Patientenverwaltung |
-| ❤️ **VitalwertService** | Erfassen, Prüfen und Validieren eingehender Vitaldaten; Erzeugung von Alarm-Events bei Grenzwertüberschreitung | Vitaldatenmanagement |
-| 🔔 **BenachrichtigungsService** | Erstellen und Versenden von Benachrichtigungen an zuständiges Personal | Benachrichtigungssystem |
-| 🧾 **BehandlungsService** | Verwaltung von Behandlungen, Diagnosen und Verlaufseinträgen | Behandlungsmanagement |
-| 🧠 **AnalyseService (optional)** | Analysiert historische Vitaldaten, erkennt Trends und Muster | Vitaldatenmanagement |
-
----
-
-### 💾 Repositories
-
-| Repository | Methoden (Beispiele) | Zweck |
-|:--|:--|:--|
-| 🧍‍⚕️ **PatientRepository** | `findPatientById(id)`, `savePatient(patient)` | Verwaltung und Persistenz der Patientendaten |
-| ❤️ **VitalwertRepository** | `findVitalwertByPatient(patientId)`, `saveVitalwert(vitalwert)` | Speicherung und Analyse der Vitaldaten |
-| 🔔 **BenachrichtigungRepository** | `findAlertByStatus(status)`, `saveAlert(alert)` | Verwaltung von Alarmen und Benachrichtigungen |
-| 🧾 **BehandlungsRepository** | `findBehandlungById(id)`, `saveBehandlung(behandlung)` | Zugriff auf Behandlungs- und Verlaufseinträge |
-| 👩‍⚕️ **PersonalRepository** | `findPersonalByRole(role)`, `assignPatient(patientId)` | Verwaltung medizinischer Benutzerkonten und Zuweisungen |
-
----
-
-### 🕸️ Übersicht der Domänenlogik
-
-```mermaid
-flowchart TD
-
-    %% ================================
-    %%          AGGREGATES
-    %% ================================
-    subgraph Aggregates [Aggregate-Ebene]
-        A1[🧍‍⚕️ Patient]
-        A2[❤️ Vitaldaten]
-        A3[🔔 Benachrichtigung]
-        A4[🧾 Behandlung]
-        A5[👩‍⚕️ Personal]
-    end
-
-    %% ================================
-    %%          DOMAIN SERVICES
-    %% ================================
-    subgraph Services [Domain Services]
-        S1[🧍‍⚕️ PatientenService]
-        S2[❤️ VitalwertService]
-        S3[🔔 BenachrichtigungsService]
-        S4[🧾 BehandlungsService]
-        S5[🧠 AnalyseService]
-    end
-
-    %% ================================
-    %%          REPOSITORIES
-    %% ================================
-    subgraph Repositories [Repositories]
-        R1[(PatientRepository)]
-        R2[(VitalwertRepository)]
-        R3[(BenachrichtigungRepository)]
-        R4[(BehandlungsRepository)]
-        R5[(PersonalRepository)]
-    end
-
-    %% ================================
-    %%          VERBINDUNGEN
-    %% ================================
-    A1 -->|enthält| A2
-    A2 -->|löst aus| A3
-    A3 -->|informiert| A5
-    A5 -->|behandelt| A4
-    A1 -->|wird betreut von| A5
-
-    S1 --> R1
-    S2 --> R2
-    S3 --> R3
-    S4 --> R4
-    S5 --> R2
-
-    S2 --> S3
-    S3 --> A5
-    S4 --> A1
-```
----
-
-### 🧩 Beispielhafte Service-Interaktion
-
-```plaintext
-1️⃣ Patient erfasst neue Vitaldaten.
-2️⃣ Der VitalwertService speichert die Werte im Repository.
-3️⃣ Das System prüft, ob Grenzwerte überschritten wurden.
-4️⃣ Bei Überschreitung: Event "Kritischer Wert erkannt".
-5️⃣ Der BenachrichtigungsService erstellt eine Benachrichtigung für das zuständige Personal.
-6️⃣ Das Personal reagiert darauf und dokumentiert die Maßnahme im BehandlungsService.
-```
----
+```markdown
+Diese Punkte fehlen noch:
+🧱 Bounded Contexts
+🧬 Entitäten und Aggregate
+⚙️ Domain Services und Repositories
+🚀 Lokale Entwicklung 
+🔧 Deployment & CI/CD
+📄 Lizenz
