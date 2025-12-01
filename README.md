@@ -52,46 +52,146 @@ Ein System, das Patientendaten sicher verwaltet, Vitalwerte überwacht und bei k
 ```plaintext
 MediTrack/
 ├── .github/
-│ └── workflows/
-| 	  └── maven-tests.yml
-├── .idea/
-├── Uebungen/
-│ 	├── Uebung1/
-| 	|   └── 1-Uebung.pdf
-│ 	├── Uebung2/
-| 	|   └── 2-Uebung.pdf
-│ 	├── Uebung3/
-| 	|   └── 3-Uebung.pdf
-│ 	├── Uebung4/
-| 	|   └── 4-Uebung.pdf
-│ 	├── Uebung5/
-| 	|   └── 5-Uebung.pdf
-│ 	├── src/
-| 	|   └── images
-|   └── 3-Uebung-MediTrack.pdf (ToDo: in Ordner 3 kopieren)
-|   └── README.md (Aufgebläht durch Übungen und nicht rein projektbezogen)
-...
-ToDo: src Folder hinzufügen
-...
-├── target/
-│ └── classes/
-| 	  ├── META-INF
-| 	  |   └── maven
-| 	  |       └── archetype.xml
-| 	  ├── archetype-resources
-| 	  |       └── src
-| 	  |       |   ├── main
-| 	  |       |   |   └── java
-| 	  |       |   |       └── App.java
-| 	  |       |   └── test
-| 	  |       |       └── java
-| 	  |       |           └── App.java
-| 	  |       └── pom.xml
-| 	  └── application.properties
+│   └── workflows/
+│       └── maven-tests.yml
+│
 ├── .gitignore
+│
+├── .idea/
+│
 ├── Jenkinsfile
-├── README.md
-└── pom.xml
+│
+├── README.md                  (ToDo: Projekt-README ohne Übungsdetails, nur Projektinhalte)
+│
+├── Uebungen/
+│   ├── README.md              (ToDo: aufräumen und nur Übungsaufgaben rein nehmen)
+│   ├── Uebung1/
+│   │   └── 1-Uebung.pdf
+│   ├── Uebung2/
+│   │   └── 2-Uebung.pdf
+│   ├── Uebung3/
+│   │   └── 3-Uebung.pdf
+│   ├── Uebung4/
+│   │   └── 4-Uebung.pdf
+│   ├── Uebung5/
+│   │   └── 5-Uebung.pdf
+│   ├── src/
+│   │   └── images/
+│   └── 3-Uebung-MediTrack.pdf
+│
+├── pom.xml
+│
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── meditrack/
+│   │   │           ├── alerts/
+│   │   │           │   ├── api/
+│   │   │           │   ├── application/
+│   │   │           │   │   ├── dto/
+│   │   │           │   │   ├── handler/
+│   │   │           │   │   └── service/
+│   │   │           │   ├── domain/
+│   │   │           │   │   ├── entity/
+│   │   │           │   │   ├── events/
+│   │   │           │   │   ├── repository/
+│   │   │           │   │   ├── service/
+│   │   │           │   │   └── valueobject/
+│   │   │           │   └── infrastructure/
+│   │   │           │       ├── adapter/
+│   │   │           │       ├── notifications/
+│   │   │           │       └── persistence/
+│   │   │           │
+│   │   │           ├── assignment/
+│   │   │           │   ├── api/
+│   │   │           │   ├── application/
+│   │   │           │   │   ├── command/
+│   │   │           │   │   ├── dto/
+│   │   │           │   │   └── service/
+│   │   │           │   ├── domain/
+│   │   │           │   │   ├── entity/
+│   │   │           │   │   ├── events/
+│   │   │           │   │   ├── repository/
+│   │   │           │   │   └── service/
+│   │   │           │   └── infrastructure/
+│   │   │           │       ├── adapter/
+│   │   │           │       └── persistence/
+│   │   │           │
+│   │   │           ├── coredata/
+│   │   │           │   ├── api/
+│   │   │           │   ├── application/
+│   │   │           │   │   ├── command/
+│   │   │           │   │   ├── dto/
+│   │   │           │   │   └── service/
+│   │   │           │   ├── domain/
+│   │   │           │   │   ├── entity/
+│   │   │           │   │   ├── repository/
+│   │   │           │   │   ├── service/
+│   │   │           │   │   └── valueobject/
+│   │   │           │   └── infrastructure/
+│   │   │           │       ├── config/
+│   │   │           │       └── persistence/
+│   │   │           │
+│   │   │           ├── history/
+│   │   │           │   ├── api/
+│   │   │           │   ├── application/
+│   │   │           │   │   ├── command/
+│   │   │           │   │   ├── dto/
+│   │   │           │   │   ├── query/
+│   │   │           │   │   └── service/
+│   │   │           │   ├── domain/
+│   │   │           │   │   ├── entity/
+│   │   │           │   │   ├── events/
+│   │   │           │   │   ├── repository/
+│   │   │           │   │   └── service/
+│   │   │           │   └── infrastructure/
+│   │   │           │       ├── adapter/
+│   │   │           │       ├── persistence/
+│   │   │           │       └── projections/
+│   │   │           │
+│   │   │           ├── shared/
+│   │   │           │   ├── exception/
+│   │   │           │   └── valueobject/
+│   │   │           │
+│   │   │           ├── user/
+│   │   │           │   ├── api/
+│   │   │           │   ├── application/
+│   │   │           │   │   ├── command/
+│   │   │           │   │   ├── dto/
+│   │   │           │   │   └── service/
+│   │   │           │   ├── domain/
+│   │   │           │   │   ├── entity/
+│   │   │           │   │   ├── repository/
+│   │   │           │   │   ├── service/
+│   │   │           │   │   └── valueobject/
+│   │   │           │   └── infrastructure/
+│   │   │           │       ├── config/
+│   │   │           │       └── persistence/
+│   │   │           │
+│   │   │           └── vitals/
+│   │   │               ├── api/
+│   │   │               ├── application/
+│   │   │               │   ├── command/
+│   │   │               │   ├── dto/
+│   │   │               │   └── service/
+│   │   │               ├── domain/
+│   │   │               │   ├── entity/
+│   │   │               │   ├── events/
+│   │   │               │   ├── repository/
+│   │   │               │   ├── service/
+│   │   │               │   └── valueobject/
+│   │   │               └── infrastructure/
+│   │   │                   ├── persistence/
+│   │   │                   └── scheduler/
+│   │   │
+│   │   └── resources/
+│   │       └── application.properties
+│
+└── target/
+    └── classes/
+        ├── META-INF/
+        └── application.properties
 ```
 
 ---
