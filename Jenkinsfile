@@ -2,108 +2,126 @@ pipeline {
     agent any
 
     environment {
-        MAVEN_HOME = "/var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven_3.9.11"
-        BASE_DEPLOY_DIR = "/var/lib/jenkins/meditrack"
+        // nur einfache Konstanten hier!
+        BASE_DYNAMIC_PORT = "9093"
     }
 
     stages {
-        stage('Kill old MediTrack instances') {
-            steps {
-                sh '''
-                    echo "🔪 Killing MediTrack processes on ports 9090–9099..."
-                    for port in $(seq 9090 9099); do
-                        pid=$(lsof -t -i:$port || true)
-                        if [ ! -z "$pid" ]; then
-                            echo "Killing PID $pid on port $port"
-                            kill -9 $pid || true
-                        fi
-                    done
-                    echo "🕑 Waiting 5 seconds before continuing..."
-                    sleep 5
-                '''
-            }
-        }
 
-        stage('Checkout SCM') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Setup Environment') {
+        stage('Init / Branch & Service') {
             steps {
                 script {
-                    BRANCH = env.BRANCH_NAME ?: sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
-                    DEPLOY_DIR = "${BASE_DEPLOY_DIR}/${BRANCH}"
+                    // Branch-Name (Fallback für normalen Single-Branch-Job)
+                    def branchName = env.BRANCH_NAME ?: 'main'
 
-                    // Port je nach Branch
-                    SERVER_PORT = (BRANCH == 'main') ? 9090 :
-                                  (BRANCH == 'test') ? 9091 :
-                                  (BRANCH == 'features') ? 9092 :
-                                  9093 // alle anderen starten bei 9093 (einfachheitshalber)
+                    // "sicherer" Branch-Name für Dateinamen / Service-Namen
+                    env.BRANCH_NAME_SAFE = branchName.replaceAll('[^A-Za-z0-9_-]', '-')
+                    env.SERVICE_NAME     = "meditrack-${env.BRANCH_NAME_SAFE}"
+                    env.DEPLOY_DIR       = "/opt/${env.SERVICE_NAME}"
 
-                    echo "Branch: ${BRANCH}"
-                    echo "Deploy dir: ${DEPLOY_DIR}"
-                    echo "Server Port: ${SERVER_PORT}"
-                    echo "Maven Home: ${MAVEN_HOME}"
+                    // Feste Ports für bekannte Branches
+                    def staticPorts = [
+                        "main"    : 9090,
+                        "test"    : 9091,
+                        "features": 9092
+                    ]
 
-                    sh "mkdir -p ${DEPLOY_DIR}"
+                    int p
+                    if (staticPorts.containsKey(branchName)) {
+                        p = staticPorts[branchName]
+                    } else {
+                        int base = env.BASE_DYNAMIC_PORT.toInteger()
+                        int hash = Math.abs(branchName.hashCode())
+                        p = base + (hash % 50)
+                    }
+
+                    env.PORT = "${p}"
+                    echo "Assigned PORT = ${env.PORT}"
+                    echo "Service  : ${env.SERVICE_NAME}"
+                    echo "DeployDir: ${env.DEPLOY_DIR}"
                 }
             }
         }
 
-        stage('Build') {
+        stage('Build Maven') {
             steps {
-                sh """
-                    echo "🔨 Building JAR..."
-                    ${MAVEN_HOME}/bin/mvn clean package -DskipTests
-                """
+                script {
+                    if (isUnix()) {
+                        // Linux / Server
+                        //sh 'mvn -B -DskipTests clean package'
+                         sh 'mvn -B clean verify'
+                    } else {
+                        // Windows-Jenkins (lokal) – Maven über den Jenkins-Maven-Installer
+                        bat '"C:\\Users\\micro\\AppData\\Local\\Jenkins\\.jenkins\\tools\\hudson.tasks.Maven_MavenInstallation\\Maven_3.9.11\\bin\\mvn.cmd" -B -DskipTests clean package'
+                    }
+                }
             }
         }
 
         stage('Deploy') {
+            // nur auf Linux deployen
+            when { expression { isUnix() } }
             steps {
                 script {
-                    SERVICE_NAME="meditrack-${BRANCH}"
-
-                    // Alten Service stoppen
-                    sh "sudo systemctl stop ${SERVICE_NAME}.service || true"
-
-                    // JAR kopieren
-                    sh "cp target/meditrack-*.jar ${DEPLOY_DIR}/"
-
-                    // systemd-Service erstellen/ersetzen
                     sh """
-                    cat <<EOF | sudo tee /etc/systemd/system/${SERVICE_NAME}.service
-                    [Unit]
-                    Description=MediTrack Spring Boot Application (${BRANCH})
-                    After=network.target
-
-                    [Service]
-                    User=jenkins
-                    ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar ${DEPLOY_DIR}/meditrack-0.0.1-SNAPSHOT.jar --server.port=${SERVER_PORT}
-                    Restart=always
-                    LimitNOFILE=4096
-                    LimitNPROC=500
-                    CPUQuota=50%
-
-                    [Install]
-                    WantedBy=multi-user.target
-                    EOF
+                        sudo mkdir -p ${env.DEPLOY_DIR}
+                        sudo cp target/*.jar ${env.DEPLOY_DIR}/app.jar
+                        sudo chmod +x ${env.DEPLOY_DIR}/app.jar
                     """
-
-                    sh "sudo systemctl daemon-reload"
-                    sh "sudo systemctl enable ${SERVICE_NAME}.service"
-                    sh "sudo systemctl restart ${SERVICE_NAME}.service"
-
-                    echo "✅ Deployed branch ${BRANCH} on port ${SERVER_PORT}"
                 }
             }
         }
 
-        stage('Show Running') {
+        stage('Create systemd service') {
+            // nur auf Linux systemd-Service schreiben
+            when { expression { isUnix() } }
             steps {
-                sh "sudo systemctl status meditrack-${BRANCH}.service --no-pager || true"
+                script {
+                    def serviceFile = """
+[Unit]
+Description=MediTrack Service for ${env.BRANCH_NAME_SAFE}
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/bin/java -jar ${env.DEPLOY_DIR}/app.jar --server.port=${env.PORT}
+Restart=always
+RestartSec=10
+EnvironmentFile=/opt/meditrack/envs/${env.BRANCH_NAME_SAFE}.env
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+                    writeFile file: "service.tmp", text: serviceFile
+
+                    sh """
+                        sudo mv service.tmp /etc/systemd/system/${env.SERVICE_NAME}.service
+                        sudo systemctl daemon-reload
+                        sudo systemctl enable ${env.SERVICE_NAME}.service
+                    """
+                }
+            }
+        }
+
+        stage('Restart service') {
+            // nur auf Linux
+            when { expression { isUnix() } }
+            steps {
+                sh """
+                    sudo systemctl restart ${env.SERVICE_NAME}.service
+                    sudo systemctl status ${env.SERVICE_NAME}.service --no-pager || true
+                """
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                def branchName = env.BRANCH_NAME ?: 'main'
+                def port       = env.PORT ?: 'unbekannt'
+                echo "🏁 Build finished for branch ${branchName} on port ${port}"
             }
         }
     }
