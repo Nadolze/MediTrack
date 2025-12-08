@@ -1,41 +1,105 @@
 package com.meditrack.user.api;
 
-import com.meditrack.user.api.dto.CreateUserRequest;
-import com.meditrack.user.api.dto.UserResponse;
+import com.meditrack.user.application.dto.UserLoginDto;
+import com.meditrack.user.application.dto.UserRegistrationDto;
 import com.meditrack.user.application.service.UserApplicationService;
-import com.meditrack.user.domain.entity.User;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 
 /**
- * REST-Controller für alle Benutzer-Endpunkte.
+ * MVC-Controller für Login und Registrierung.
  *
- * Diese Klasse stellt HTTP-Endpunkte bereit, über die Clients
- * Benutzer erstellen, lesen oder löschen können.
- *
- * Die eigentliche Logik liegt NICHT im Controller,
- * sondern ausschließlich im ApplicationService.
+ * Dieser Controller liefert Thymeleaf-Templates zurück
+ * und verwendet dafür DTOs aus dem Application-Layer.
  */
-@RestController
-@RequestMapping("/users")
+@Controller
 public class UserController {
 
-    private final UserApplicationService userService;
+    /**
+     * Application-Service, der die Anwendungsfälle für Benutzer ausführt.
+     */
+    private final UserApplicationService userApplicationService;
 
-    public UserController(UserApplicationService userService) {
-        this.userService = userService;
+    /**
+     * Konstruktor-Injektion durch Spring.
+     */
+    public UserController(UserApplicationService userApplicationService) {
+        this.userApplicationService = userApplicationService;
+    }
+
+    // ---------------- Registrierung ----------------
+
+    /**
+     * Zeigt das Registrierungsformular an.
+     */
+    @GetMapping("/register")
+    public String showRegisterForm(Model model) {
+        model.addAttribute("registration", new UserRegistrationDto());
+        return "user/register";
     }
 
     /**
-     * POST /users
-     *
-     * Erstellt einen neuen Benutzer.
-     *
-     * @param request Daten aus dem HTTP-Request (Name + Email)
-     * @return Benutzer-Daten als UserResponse
+     * Verarbeitet das Registrierungsformular.
      */
-    @PostMapping
-    public UserResponse createUser(@RequestBody CreateUserRequest request) {
-        User user = userService.createUser(request.name, request.email);
-        return new UserResponse(user);
+    @PostMapping("/register")
+    public String handleRegister(
+            @ModelAttribute("registration") UserRegistrationDto form,
+            BindingResult bindingResult,
+            Model model
+    ) {
+        if (form.getUsername() == null || form.getUsername().isBlank()) {
+            bindingResult.rejectValue("username", "username.empty", "Benutzername darf nicht leer sein.");
+        }
+        if (form.getEmail() == null || !form.getEmail().contains("@")) {
+            bindingResult.rejectValue("email", "email.invalid", "Bitte eine gültige E-Mail-Adresse eingeben.");
+        }
+        if (form.getPassword() == null || form.getPassword().length() < 6) {
+            bindingResult.rejectValue("password", "password.short", "Passwort muss mindestens 6 Zeichen haben.");
+        }
+
+        if (bindingResult.hasErrors()) {
+            return "user/register";
+        }
+
+        userApplicationService.registerUser(form);
+        model.addAttribute("message", "Registrierung erfolgreich. Bitte melde dich jetzt an.");
+        return "redirect:/login";
+    }
+
+    // ---------------- Login ----------------
+
+    /**
+     * Zeigt das Login-Formular an.
+     */
+    @GetMapping("/login")
+    public String showLoginForm(Model model) {
+        model.addAttribute("login", new UserLoginDto());
+        return "user/login";
+    }
+
+    /**
+     * Verarbeitet das Login-Formular.
+     */
+    @PostMapping("/login")
+    public String handleLogin(
+            @ModelAttribute("login") UserLoginDto form,
+            Model model
+    ) {
+        boolean success = userApplicationService.login(
+                form.getUsernameOrEmail(),
+                form.getPassword()
+        );
+
+        if (!success) {
+            model.addAttribute("error", "Benutzername/E-Mail oder Passwort ist falsch.");
+            return "user/login";
+        }
+
+        model.addAttribute("message", "Erfolgreich eingeloggt.");
+        return "home"; // oder "redirect:/", je nach deiner Startseite
     }
 }

@@ -21,12 +21,6 @@ public class UserId {
 
     /**
      * Fabrikmethode zur automatischen Erzeugung einer neuen eindeutigen Benutzer-ID.
-     *
-     * Hintergrund:
-     * - Value Objects werden oft über Fabrikmethoden instanziert.
-     * - UUIDs sind ideal, um global eindeutige IDs zu erzeugen.
-     *
-     * @return neue UserId mit zufälligem UUID-Wert
      */
     public static UserId generate() {
         return new UserId(UUID.randomUUID().toString());

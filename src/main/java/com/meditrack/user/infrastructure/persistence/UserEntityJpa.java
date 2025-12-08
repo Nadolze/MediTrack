@@ -5,34 +5,61 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * JPA-Entity für die Datenbanktabelle "users".
+ * JPA-Entität für Benutzer.
  *
- * Diese Klasse wird in der Infrastructure-Schicht eingesetzt,
- * um den Benutzer in der Datenbank zu speichern.
+ * Diese Klasse spiegelt die Tabelle "users" in der Datenbank wider.
+ * Aktuell werden nur die Felder id, name und email gespeichert.
  */
 @Entity
 @Table(name = "users")
 public class UserEntityJpa {
 
+    /**
+     * Primärschlüssel des Benutzers (z.B. UUID als String).
+     */
     @Id
     private String id;
 
+    /**
+     * Anzeigename des Benutzers.
+     */
     private String name;
+
+    /**
+     * E-Mail-Adresse des Benutzers.
+     */
     private String email;
 
-    // Standardkonstruktor für JPA
+    /**
+     * Standard-Konstruktor nur für JPA.
+     */
     protected UserEntityJpa() {
     }
 
-    // Konstruktor für den ApplicationService
+    /**
+     * Konstruktor zum Erzeugen einer neuen User-Entität im Anwendungscode.
+     *
+     * @param id    ID des Benutzers
+     * @param name  Name des Benutzers
+     * @param email E-Mail-Adresse des Benutzers
+     */
     public UserEntityJpa(String id, String name, String email) {
         this.id = id;
         this.name = name;
         this.email = email;
     }
 
-    // Getter für JPA
-    public String getId() { return id; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
+    // --- Getter ---
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
 }
