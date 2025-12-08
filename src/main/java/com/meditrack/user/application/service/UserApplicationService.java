@@ -33,7 +33,7 @@ public class UserApplicationService {
      * Registriert einen neuen Benutzer auf Basis des Formular-DTOs.
      *
      * Aktuell:
-     * - Passwort wird noch nicht gespeichert/ausgewertet.
+     * - Passwort wird als Plain-Text gespeichert (TODO: Verschlüsselung hinzufügen).
      * - Name im Domain-Modell entspricht dem Benutzernamen.
      */
     public User registerUser(UserRegistrationDto dto) {
@@ -44,11 +44,11 @@ public class UserApplicationService {
                 dto.getEmail()
         );
 
-        // 2) Domain → JPA-Entität (3 Argumente: id, name, email)
+        // 2) Domain → JPA-Entität (4 Argumente: id, name, email, password)
         UserEntityJpa entity = new UserEntityJpa(
-                user.getId().getValue(),
                 user.getName(),
-                user.getEmail()
+                user.getEmail(),
+                dto.getPassword()
         );
 
         // 3) Speichern
