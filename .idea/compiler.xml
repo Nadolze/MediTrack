@@ -21,14 +21,24 @@
         <module name="mediweb" />
         <module name="meditrack" />
       </profile>
+      <profile name="Annotation profile for MediTrack" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
+        </processorPath>
+        <module name="MediTrack" />
+      </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="MediTrack" target="1.7" />
       <module name="my-ci-demo" target="17" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="MediTrack" options="-parameters" />
       <module name="meditrack" options="-parameters" />
       <module name="mediweb" options="-parameters" />
     </option>
