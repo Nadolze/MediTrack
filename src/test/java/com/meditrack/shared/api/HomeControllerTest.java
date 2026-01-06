@@ -1,42 +1,46 @@
 package com.meditrack.shared.api;
 
-import org.junit.jupiter.api.DisplayName;
+import com.meditrack.shared.valueobject.UserSession;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Web-MVC-Tests für den HomeController.
- *
- * Getestet werden:
- *  - Landing-Page ("/")
- *  - einfache Home-Seite ("/home")
- */
-@WebMvcTest(HomeController.class)
 class HomeControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Test
-    @DisplayName("GET / liefert Landing-Page")
-    void root_shouldReturnLandingView() throws Exception {
-        mockMvc.perform(get("/"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("landing"))
-                .andExpect(model().attributeExists("title"));
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(new HomeController()).build();
     }
 
     @Test
-    @DisplayName("GET /home liefert Home-View")
-    void home_shouldReturnHomeView() throws Exception {
+    void getRoot_withoutSessionUser_shouldShowLandingView() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/landing"));
+    }
+
+    @Test
+    void getRoot_withSessionUser_shouldShowHomeView() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(SessionKeys.LOGGED_IN_USER, new UserSession("1", "john", "john@example.com", "PATIENT"));
+
+        mockMvc.perform(get("/").session(session))
+                .andExpect(status().isOk())
+                .andExpect(view().name("user/home"))
+                .andExpect(model().attributeExists("currentUser"));
+    }
+
+    @Test
+    void getHome_withoutSessionUser_shouldBehaveLikeRootAndShowLanding() throws Exception {
         mockMvc.perform(get("/home"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("home"))
-                .andExpect(model().attributeExists("title"));
+                .andExpect(view().name("user/landing"));
     }
 }

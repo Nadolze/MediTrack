@@ -15,4 +15,8 @@ Benötigte Variablen:
 - `SPRING_DATASOURCE_PASSWORD`
 - `SPRING_JPA_HIBERNATE_DDL_AUTO`
 
+ToDo: In IntelliJ das Plugun: EnvFile runterladen, dann neustart und Database.env in die Konfiguration übernehmen:
+![img.png](src/data/images/env-config1.png)
+![img.png](src/data/images/env-config2.png)
+
 Hier folgt das DB Konstrukt....

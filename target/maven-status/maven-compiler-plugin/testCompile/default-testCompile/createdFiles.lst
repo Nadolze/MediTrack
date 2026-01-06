@@ -1,0 +1,9 @@
+com\meditrack\user\infrastructure\persistence\JpaUserRepositoryTest.class
+com\meditrack\shared\infrastructure\DatabaseCreateTablesTest.class
+com\meditrack\medication\application\MedicationPlanServiceTest.class
+com\meditrack\medication\api\MedicationPlanControllerTest.class
+com\meditrack\shared\infrastructure\RoleBootstrapperTest.class
+com\meditrack\user\api\UserControllerTest.class
+com\meditrack\user\domain\entity\UserTest.class
+com\meditrack\user\application\service\UserApplicationServiceTest.class
+com\meditrack\shared\api\HomeControllerTest.class

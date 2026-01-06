@@ -50,3 +50,7 @@ Im Folgenden wird `<BASE_URL>` als Platzhalter für die Basis-Adresse des Server
 > Der Port (`9090`) und die Host-Adresse werden über die Spring-Boot-Konfiguration (z. B. `application.properties`) festgelegt und können je nach Umgebung (lokal, Test, Produktion) variieren.
 
 ---
+
+> **Farben:**
+Akzent:     #11BFD1
+Umgebung:   #002B39

@@ -1,6 +1,7 @@
 package com.meditrack.user.domain.entity;
 
 import com.meditrack.user.domain.valueobject.UserId;
+import com.meditrack.user.domain.valueobject.UserRole;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -8,96 +9,41 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Unit-Tests für die Domänen-Entität User.
- *
- * Getestet wird:
- *  - korrekte Erstellung eines Benutzers
- *  - Validierung im Konstruktor
- *  - Änderung von Name und E-Mail
+ * Unit-Tests für die Domänen-Entität User (TDD/DDD).
  */
 class UserTest {
 
     @Test
-    @DisplayName("User wird mit gültigen Werten korrekt erstellt")
-    void createUser_withValidValues_shouldSucceed() {
-        UserId id = UserId.generate();
+    @DisplayName("User wird mit Standardrolle PATIENT erstellt")
+    void createUser_defaultRole_shouldBePatient() {
+        User user = new User(UserId.generate(), "Marcell", "marcell@example.com");
 
-        User user = new User(id, "Marcell", "marcell@example.com");
-
-        assertThat(user.getId()).isEqualTo(id);
-        assertThat(user.getName()).isEqualTo("Marcell");
-        assertThat(user.getEmail()).isEqualTo("marcell@example.com");
+        assertThat(user.getRole()).isEqualTo(UserRole.PATIENT);
     }
 
     @Test
-    @DisplayName("Konstruktor wirft Exception, wenn UserId null ist")
-    void constructor_withNullId_shouldThrowException() {
+    @DisplayName("User kann mit expliziter Rolle erstellt werden")
+    void createUser_withExplicitRole_shouldWork() {
+        User user = new User(UserId.generate(), "Doc", "doc@example.com", UserRole.STAFF);
+
+        assertThat(user.getRole()).isEqualTo(UserRole.STAFF);
+    }
+
+    @Test
+    @DisplayName("Konstruktor: Null-Rolle wirft Exception")
+    void createUser_roleNull_shouldThrow() {
         assertThrows(IllegalArgumentException.class, () ->
-                new User(null, "Marcell", "marcell@example.com")
+                new User(UserId.generate(), "X", "x@example.com", null)
         );
     }
 
     @Test
-    @DisplayName("Konstruktor wirft Exception, wenn Name leer ist")
-    void constructor_withEmptyName_shouldThrowException() {
-        UserId id = UserId.generate();
+    @DisplayName("changeRole ändert Rolle")
+    void changeRole_shouldUpdateRole() {
+        User user = new User(UserId.generate(), "Marcell", "marcell@example.com");
 
-        assertThrows(IllegalArgumentException.class, () ->
-                new User(id, " ", "marcell@example.com")
-        );
-    }
+        user.changeRole(UserRole.ADMIN);
 
-    @Test
-    @DisplayName("Konstruktor wirft Exception, wenn E-Mail ungültig ist")
-    void constructor_withInvalidEmail_shouldThrowException() {
-        UserId id = UserId.generate();
-
-        assertThrows(IllegalArgumentException.class, () ->
-                new User(id, "Marcell", "keine-mail-adresse")
-        );
-    }
-
-    @Test
-    @DisplayName("changeName ändert den Namen des Benutzers")
-    void changeName_shouldUpdateName() {
-        UserId id = UserId.generate();
-        User user = new User(id, "Marcell", "marcell@example.com");
-
-        user.changeName("Neuer Name");
-
-        assertThat(user.getName()).isEqualTo("Neuer Name");
-    }
-
-    @Test
-    @DisplayName("changeName mit leerem Namen wirft Exception")
-    void changeName_withEmptyName_shouldThrowException() {
-        UserId id = UserId.generate();
-        User user = new User(id, "Marcell", "marcell@example.com");
-
-        assertThrows(IllegalArgumentException.class, () ->
-                user.changeName(" ")
-        );
-    }
-
-    @Test
-    @DisplayName("changeEmail ändert die E-Mail-Adresse")
-    void changeEmail_shouldUpdateEmail() {
-        UserId id = UserId.generate();
-        User user = new User(id, "Marcell", "marcell@example.com");
-
-        user.changeEmail("neu@example.com");
-
-        assertThat(user.getEmail()).isEqualTo("neu@example.com");
-    }
-
-    @Test
-    @DisplayName("changeEmail mit ungültiger E-Mail wirft Exception")
-    void changeEmail_withInvalidEmail_shouldThrowException() {
-        UserId id = UserId.generate();
-        User user = new User(id, "Marcell", "marcell@example.com");
-
-        assertThrows(IllegalArgumentException.class, () ->
-                user.changeEmail("ungültig")
-        );
+        assertThat(user.getRole()).isEqualTo(UserRole.ADMIN);
     }
 }

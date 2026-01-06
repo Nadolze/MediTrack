@@ -1,8 +1,8 @@
 package com.meditrack.user.application.service;
 
+import com.meditrack.shared.valueobject.UserSession;
 import com.meditrack.user.application.dto.UserRegistrationDto;
 import com.meditrack.user.domain.entity.User;
-import com.meditrack.user.domain.valueobject.UserId;
 import com.meditrack.user.infrastructure.persistence.JpaUserRepository;
 import com.meditrack.user.infrastructure.persistence.UserEntityJpa;
 import org.junit.jupiter.api.DisplayName;
@@ -12,119 +12,88 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit-Tests für den UserApplicationService.
- *
- * Getestet wird:
- *  - Registrierung eines Benutzers (registerUser)
- *  - Login-Prüfung (login)
- *
- * Es werden keine echten Datenbankzugriffe ausgeführt.
- * Das JpaUserRepository wird mit Mockito gemockt.
- */
 @ExtendWith(MockitoExtension.class)
 class UserApplicationServiceTest {
 
     @Mock
     private JpaUserRepository jpaUserRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private UserApplicationService userApplicationService;
 
     @Test
-    @DisplayName("registerUser erzeugt Domain-User und speichert JPA-Entity")
-    void registerUser_shouldCreateDomainUserAndPersistEntity() {
-        // Arrange
-        UserRegistrationDto dto = new UserRegistrationDto();
-        dto.setUsername("marcell");
-        dto.setEmail("marcell@example.com");
-        dto.setPassword("geheimespw");
+    @DisplayName("registerUser speichert User als PATIENT inkl. Passwort-Hash")
+    void registerUser_shouldSaveEntityWithPatientRole() {
+        UserRegistrationDto dto = new UserRegistrationDto(
+                "marcell",
+                "marcell@example.com",
+                "secret123",
+                "secret123"
+        );
 
-        // save(...) soll einfach das übergebene Entity zurückliefern
-        when(jpaUserRepository.save(any(UserEntityJpa.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(jpaUserRepository.findByEmail(dto.getEmail())).thenReturn(Optional.empty());
+        when(jpaUserRepository.findByName(dto.getUsername())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("secret123")).thenReturn("HASH");
 
-        // Act
-        User result = userApplicationService.registerUser(dto);
+        User user = userApplicationService.registerUser(dto);
 
-        // Assert Domain-Objekt
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isInstanceOf(UserId.class);
-        assertThat(result.getName()).isEqualTo("marcell");
-        assertThat(result.getEmail()).isEqualTo("marcell@example.com");
+        assertThat(user.getName()).isEqualTo("marcell");
+        assertThat(user.getEmail()).isEqualTo("marcell@example.com");
 
-        // Assert JPA-Entity, die ans Repository übergeben wurde
-        ArgumentCaptor<UserEntityJpa> entityCaptor = ArgumentCaptor.forClass(UserEntityJpa.class);
-        verify(jpaUserRepository, times(1)).save(entityCaptor.capture());
+        ArgumentCaptor<UserEntityJpa> captor = ArgumentCaptor.forClass(UserEntityJpa.class);
+        verify(jpaUserRepository, times(1)).save(captor.capture());
 
-        UserEntityJpa savedEntity = entityCaptor.getValue();
-        assertThat(savedEntity.getId()).isEqualTo(result.getId().getValue());
-        assertThat(savedEntity.getName()).isEqualTo("marcell");
-        assertThat(savedEntity.getEmail()).isEqualTo("marcell@example.com");
+        UserEntityJpa saved = captor.getValue();
+        assertThat(saved.getEmail()).isEqualTo("marcell@example.com");
+        assertThat(saved.getPasswordHash()).isEqualTo("HASH");
+        assertThat(saved.getRole()).isEqualTo("PATIENT");
     }
 
     @Test
-    @DisplayName("login liefert true, wenn Benutzer per E-Mail gefunden wird")
-    void login_shouldReturnTrueWhenUserFoundByEmail() {
-        // Arrange
+    @DisplayName("authenticate liefert UserSession bei korrektem Passwort")
+    void authenticate_shouldReturnSessionUser() {
         String email = "marcell@example.com";
-        String password = "egalImMoment";
+        String password = "secret123";
+        String hash = "HASH";
 
-        UserEntityJpa entity = new UserEntityJpa("123", "marcell", email);
+        UserEntityJpa entity = new UserEntityJpa("123", "marcell", email, hash, "STAFF");
+
         when(jpaUserRepository.findByEmail(email)).thenReturn(Optional.of(entity));
+        when(passwordEncoder.matches(password, hash)).thenReturn(true);
 
-        // Act
-        boolean result = userApplicationService.login(email, password);
+        Optional<UserSession> result = userApplicationService.authenticate(email, password);
 
-        // Assert
-        assertThat(result).isTrue();
-        verify(jpaUserRepository, times(1)).findByEmail(email);
-        verify(jpaUserRepository, never()).findByName(anyString());
+        assertThat(result).isPresent();
+        assertThat(result.get().getUserId()).isEqualTo("123");
+        assertThat(result.get().getUsername()).isEqualTo("marcell");
+        assertThat(result.get().getRole()).isEqualTo("STAFF");
     }
 
     @Test
-    @DisplayName("login liefert true, wenn Benutzer per Name gefunden wird")
-    void login_shouldReturnTrueWhenUserFoundByName() {
-        // Arrange
-        String username = "marcell";
-        String password = "egalImMoment";
+    @DisplayName("authenticate liefert empty bei falschem Passwort")
+    void authenticate_wrongPassword_shouldReturnEmpty() {
+        String email = "marcell@example.com";
+        String password = "wrong";
+        String hash = "HASH";
 
-        when(jpaUserRepository.findByEmail(username)).thenReturn(Optional.empty());
-        when(jpaUserRepository.findByName(username))
-                .thenReturn(Optional.of(new UserEntityJpa("123", username, "marcell@example.com")));
+        UserEntityJpa entity = new UserEntityJpa("123", "marcell", email, hash);
 
-        // Act
-        boolean result = userApplicationService.login(username, password);
+        when(jpaUserRepository.findByEmail(email)).thenReturn(Optional.of(entity));
+        when(passwordEncoder.matches(password, hash)).thenReturn(false);
 
-        // Assert
-        assertThat(result).isTrue();
-        verify(jpaUserRepository, times(1)).findByEmail(username);
-        verify(jpaUserRepository, times(1)).findByName(username);
-    }
+        Optional<UserSession> result = userApplicationService.authenticate(email, password);
 
-    @Test
-    @DisplayName("login liefert false, wenn kein Benutzer gefunden wird")
-    void login_shouldReturnFalseWhenUserNotFound() {
-        // Arrange
-        String identifier = "unbekannt";
-        String password = "egalImMoment";
-
-        when(jpaUserRepository.findByEmail(identifier)).thenReturn(Optional.empty());
-        when(jpaUserRepository.findByName(identifier)).thenReturn(Optional.empty());
-
-        // Act
-        boolean result = userApplicationService.login(identifier, password);
-
-        // Assert
-        assertThat(result).isFalse();
-        verify(jpaUserRepository, times(1)).findByEmail(identifier);
-        verify(jpaUserRepository, times(1)).findByName(identifier);
+        assertThat(result).isEmpty();
+        verify(passwordEncoder, times(1)).matches(password, hash);
     }
 }
