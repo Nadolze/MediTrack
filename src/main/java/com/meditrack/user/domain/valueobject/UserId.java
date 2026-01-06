@@ -21,9 +21,12 @@ public class UserId {
 
     /**
      * Fabrikmethode zur automatischen Erzeugung einer neuen eindeutigen Benutzer-ID.
+     * Generiert eine kürzere ID (8 Zeichen) für Kompatibilität mit bestehender DB.
      */
     public static UserId generate() {
-        return new UserId(UUID.randomUUID().toString());
+        // Nutze nur die ersten 8 Zeichen der UUID (ohne Bindestriche)
+        String uuid = UUID.randomUUID().toString().replace("-", "");
+        return new UserId(uuid.substring(0, 8));
     }
 
     /**
