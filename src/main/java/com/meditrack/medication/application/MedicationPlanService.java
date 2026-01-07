@@ -18,12 +18,19 @@ import java.util.List;
 @Transactional
 public class MedicationPlanService {
 
+    /**
+     * Repository für den Zugriff auf MedicationPlan-Entitäten.
+     * Kapselt alle Datenbankzugriffe.
+     */
     private final MedicationPlanRepository medicationPlanRepository;
 
     public MedicationPlanService(MedicationPlanRepository medicationPlanRepository) {
         this.medicationPlanRepository = medicationPlanRepository;
     }
 
+    /**
+     * Use-Case: Alle Medikationspläne eines Patienten abrufen.
+     */
     public List<MedicationPlanSummaryDto> getPlansForPatient(String patientId) {
         return medicationPlanRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
                 .stream()
@@ -32,7 +39,7 @@ public class MedicationPlanService {
     }
 
     /**
-     * Neuer Use-Case: Plan anlegen erfordert STAFF/ADMIN.
+     * Neuer Use-Case: Plan anlegen. Erfordert STAFF/ADMIN.
      */
     public String createPlan(UserSession actor, CreateMedicationPlanCommand command) {
         requireStaffOrAdmin(actor);
@@ -49,6 +56,9 @@ public class MedicationPlanService {
         return saved.getId();
     }
 
+    /**
+     * Prüft, ob der aktuelle Benutzer STAFF oder ADMIN ist.
+     */
     private void requireStaffOrAdmin(UserSession actor) {
         if (actor == null) {
             throw new AccessDeniedException("Bitte anmelden.");
@@ -57,7 +67,11 @@ public class MedicationPlanService {
             throw new AccessDeniedException("Keine Berechtigung: Nur STAFF/ADMIN darf Medikationspläne anlegen.");
         }
     }
-
+    /**
+     * Wandelt ein Domain-Objekt (MedicationPlan) in ein Summary-DTO um.
+     * Dadurch wird die Domain von der UI entkoppelt und die Datenmenge
+     * für Listenansichten reduziert.
+     */
     private MedicationPlanSummaryDto toSummary(MedicationPlan plan) {
         return MedicationPlanSummaryDto.builder()
                 .id(plan.getId())

@@ -14,31 +14,53 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Controller für die Anzeige und Verwaltung von Medikationsplänen.
+ *
+ *
+ */
+
 @Controller
 @RequestMapping("/medication/plans")
 public class MedicationPlanController {
 
+    /**
+     * Application Service mit der eigentlichen Business-Logik.
+     * Der Controller delegiert alle fachlichen Operationen hierhin.
+     */
     private final MedicationPlanService medicationPlanService;
 
+    // Optionaler JdbcTemplate für einfache DB-Zugriffe.
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
+    // DTO für Patientenauswahl im UI.
     public record PatientOption(String id, String label) {}
+
 
     public MedicationPlanController(MedicationPlanService medicationPlanService) {
         this.medicationPlanService = medicationPlanService;
     }
 
+    /**
+     * GET /medication/plans
+     *
+     * Zeigt eine Liste von Medikationsplänen an.
+     * - PATIENT: sieht nur seine eigenen Pläne
+     * - STAFF/ADMIN: kann Patient über Query-Parameter auswählen
+     */
     @GetMapping
     public String list(@RequestParam(required = false) String patientId,
                        HttpSession session,
                        Model model) {
 
+        // User aus der Session holen
         UserSession user = (UserSession) session.getAttribute(SessionKeys.LOGGED_IN_USER);
         if (user == null) {
             return "redirect:/login";
         }
 
+        // Nur STAFF/ADMIN dürfen neue Pläne anlegen.
         model.addAttribute("currentUser", user);
         boolean canCreatePlan = user.hasAnyRole("STAFF", "ADMIN");
         model.addAttribute("canCreatePlan", canCreatePlan);
@@ -57,6 +79,7 @@ public class MedicationPlanController {
         // NEU: Patient-Label anzeigen (Name/Email)
         model.addAttribute("patientLabel", resolvePatientLabel(effectivePatientId));
 
+        // Medikationspläne laden, falls ein Patient ausgewählt ist
         if (!effectivePatientId.isBlank()) {
             model.addAttribute("plans", medicationPlanService.getPlansForPatient(effectivePatientId));
         } else {
@@ -66,11 +89,19 @@ public class MedicationPlanController {
         return "medication/plan-list";
     }
 
+
+    /**
+     * GET /medication/plans/new
+     *
+     * Zeigt das Formular zum Anlegen eines neuen Medikationsplans.
+     * Zugriff nur für STAFF und ADMIN.
+     */
     @GetMapping("/new")
     public String newPlan(@RequestParam(required = false) String patientId,
                           HttpSession session,
                           Model model) {
 
+        // User aus der Session holen
         UserSession user = (UserSession) session.getAttribute(SessionKeys.LOGGED_IN_USER);
         if (user == null) {
             return "redirect:/login";
@@ -81,17 +112,21 @@ public class MedicationPlanController {
             return "redirect:/medication/plans";
         }
 
+        // User-Infos fürs UI
         model.addAttribute("currentUser", user);
         model.addAttribute("canCreatePlan", user.hasAnyRole("STAFF", "ADMIN"));
 
+        // Patientenliste für Dropdown laden
         List<PatientOption> patients = loadPatientsIfPossible();
         model.addAttribute("patients", patients);
 
+        // Patient aus Request übernehmen oder leer lassen
         String effectivePatientId = (patientId == null) ? "" : patientId.trim();
         if (effectivePatientId.isBlank() && !patients.isEmpty()) {
             effectivePatientId = patients.get(0).id(); // Java-kompatibel
         }
 
+        // Command-Objekt für Formularbindung
         CreateMedicationPlanCommand command = new CreateMedicationPlanCommand();
         command.setPatientId(effectivePatientId);
 
@@ -99,11 +134,17 @@ public class MedicationPlanController {
         return "medication/plan-form";
     }
 
+    /**
+     * POST /medication/plans
+     *
+     * Legt einen neuen Medikationsplan an.
+     */
     @PostMapping
     public String create(@ModelAttribute("command") CreateMedicationPlanCommand command,
                          HttpSession session,
                          Model model) {
 
+        // User aus Session holen
         UserSession user = (UserSession) session.getAttribute(SessionKeys.LOGGED_IN_USER);
         if (user == null) {
             return "redirect:/login";
@@ -114,6 +155,7 @@ public class MedicationPlanController {
             return "redirect:/medication/plans";
         }
 
+        // Patient muss ausgewählt sein. Setzen der Daten.
         if (command.getPatientId() == null || command.getPatientId().isBlank()) {
             model.addAttribute("currentUser", user);
             model.addAttribute("canCreatePlan", user.hasAnyRole("STAFF", "ADMIN"));
@@ -133,6 +175,7 @@ public class MedicationPlanController {
      * Dropdown-Quelle für STAFF/ADMIN: mt_user (role=PATIENT).
      */
     private List<PatientOption> loadPatientsIfPossible() {
+
         if (jdbcTemplate == null) {
             return Collections.emptyList();
         }
@@ -143,6 +186,7 @@ public class MedicationPlanController {
                         String id = rs.getString("id");
                         String name = rs.getString("name");
                         String email = rs.getString("email");
+                        // Anzeige: Name > Email > ID
                         String label = (name != null && !name.isBlank())
                                 ? name
                                 : (email != null && !email.isBlank() ? email : id);
@@ -163,6 +207,7 @@ public class MedicationPlanController {
             return;
         }
         try {
+            // Prüfen, ob Patient bereits existiert
             Integer count = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM mt_patient WHERE id = ?",
                     Integer.class,
@@ -172,6 +217,7 @@ public class MedicationPlanController {
                 return;
             }
 
+            // Namen aus mt_user übernehmen
             String name = null;
             try {
                 name = jdbcTemplate.queryForObject(
@@ -185,6 +231,7 @@ public class MedicationPlanController {
                 name = userId;
             }
 
+            // Minimalen Patientendatensatz anlegen
             jdbcTemplate.update(
                     "INSERT INTO mt_patient (id, user_id, first_name, last_name) VALUES (?, ?, ?, ?)",
                     userId,

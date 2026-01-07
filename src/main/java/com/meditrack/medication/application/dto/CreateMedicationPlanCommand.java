@@ -4,6 +4,11 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
 
+/**
+ * Command-DTO zum Anlegen eines Medikationsplans.
+ * Wird im Controller an ein Formular gebunden.
+ * Wird von der Servie-Klasse verwendet, um einen Plan anzulegen.
+ */
 public class CreateMedicationPlanCommand {
 
     @NotBlank(message = "PatientId darf nicht leer sein")
