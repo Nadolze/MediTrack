@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard - MediTrack</title>
+    <link rel="stylesheet" th:href="@{/css/meditrack.css}">
+</head>
+<body>
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-logo">
+                <img th:src="@{/images/meditrack-logo.png}" alt="MediTrack">
+                <span class="header-title">MediTrack</span>
+            </div>
+            <nav class="header-nav">
+                <span class="nav-link" th:text="${userName}">Dr. Schmidt</span>
+                <a th:href="@{/patient-dashboard}" class="nav-link">Patienten-Ansicht</a>
+                <a th:href="@{/logout}" class="btn btn-logout">Abmelden</a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="dashboard-content">
+        <h1 class="dashboard-title">Personal Dashboard</h1>
+        <p class="dashboard-subtitle">Überblick über Ihre zugewiesenen Patienten</p>
+
+        <!-- Stats Cards -->
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-title">Zugewiesene Patienten</div>
+                <div class="card-value">12</div>
+                <div class="card-label">Aktive Patienten</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Kritische Alarme</div>
+                <div class="card-value" style="color: #eb5757;">3</div>
+                <div class="card-label">Benötigen Aufmerksamkeit</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Termine heute</div>
+                <div class="card-value">5</div>
+                <div class="card-label">Anstehende Konsultationen</div>
+            </div>
+        </div>
+
+        <!-- Kritische Alarme -->
+        <div style="margin-bottom: 32px;">
+            <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Kritische Alarme</h2>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="card" style="border-left: 4px solid #eb5757;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">Max Mustermann</div>
+                            <div style="font-size: 14px; color: #787774;">Herzfrequenz erhöht: 125 bpm</div>
+                        </div>
+                        <div style="font-size: 12px; color: #787774;">Vor 5 Min</div>
+                    </div>
+                </div>
+                <div class="card" style="border-left: 4px solid #f2994a;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">Lisa Müller</div>
+                            <div style="font-size: 14px; color: #787774;">Blutdruck erhöht: 145/95</div>
+                        </div>
+                        <div style="font-size: 12px; color: #787774;">Vor 12 Min</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Patienten-Liste -->
+        <div>
+            <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Zugewiesene Patienten</h2>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Alter</th>
+                            <th>Letzte Messung</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Max Mustermann</strong></td>
+                            <td>45 Jahre</td>
+                            <td>Heute, 08:30</td>
+                            <td><span style="display: inline-block; padding: 4px 8px; background: #fef2f2; color: #eb5757; border-radius: 4px; font-size: 12px; font-weight: 500;">Kritisch</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Lisa Müller</strong></td>
+                            <td>32 Jahre</td>
+                            <td>Heute, 09:15</td>
+                            <td><span style="display: inline-block; padding: 4px 8px; background: #fff4e6; color: #f2994a; border-radius: 4px; font-size: 12px; font-weight: 500;">Achtung</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Thomas Schmidt</strong></td>
+                            <td>58 Jahre</td>
+                            <td>Heute, 07:45</td>
+                            <td><span style="display: inline-block; padding: 4px 8px; background: #f0fdf4; color: #27ae60; border-radius: 4px; font-size: 12px; font-weight: 500;">Normal</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Anna Weber</strong></td>
+                            <td>67 Jahre</td>
+                            <td>Gestern, 18:20</td>
+                            <td><span style="display: inline-block; padding: 4px 8px; background: #f0fdf4; color: #27ae60; border-radius: 4px; font-size: 12px; font-weight: 500;">Normal</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

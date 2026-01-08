@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - MediTrack</title>
+    <link rel="stylesheet" th:href="@{/css/meditrack.css}">
+</head>
+<body>
+<!-- Header -->
+<div class="dashboard-header">
+    <div class="header-content">
+        <div class="header-logo">
+            <img th:src="@{/images/meditrack-logo.png}" alt="MediTrack">
+            <span class="header-title">MediTrack</span>
+        </div>
+        <nav class="header-nav">
+            <span class="nav-link" th:text="${userName}">Demo User</span>
+            <a th:href="@{/staff-dashboard}" class="nav-link">Staff-Ansicht</a>
+            <a th:href="@{/logout}" class="btn btn-logout">Abmelden</a>
+        </nav>
+    </div>
+</div>
+
+<!-- Content -->
+<div class="dashboard-content">
+    <h1 class="dashboard-title">Willkommen zurück, <span th:text="${userName}">Demo User</span></h1>
+    <p class="dashboard-subtitle">Hier ist Ihre Gesundheitsübersicht</p>
+
+    <!-- Stats Cards -->
+    <div class="card-grid">
+        <div class="card">
+            <div class="card-title">Herzfrequenz</div>
+            <div class="card-value">72 <span style="font-size: 16px; font-weight: normal;">bpm</span></div>
+            <div class="card-label">Zuletzt gemessen: Heute, 08:30</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Blutdruck</div>
+            <div class="card-value">120/80</div>
+            <div class="card-label">Zuletzt gemessen: Heute, 08:30</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Temperatur</div>
+            <div class="card-value">36.7 <span style="font-size: 16px; font-weight: normal;">°C</span></div>
+            <div class="card-label">Zuletzt gemessen: Heute, 08:30</div>
+        </div>
+    </div>
+
+    <!-- Zugewiesenes Personal -->
+    <div style="margin-bottom: 32px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Ihr medizinisches Team</h2>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Fachgebiet</th>
+                    <th>Kontakt</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Dr. med. Anna Schmidt</td>
+                    <td>Allgemeinmedizin</td>
+                    <td>a.schmidt@meditrack.de</td>
+                </tr>
+                <tr>
+                    <td>Maria Weber</td>
+                    <td>Pflegefachkraft</td>
+                    <td>m.weber@meditrack.de</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Nächste Termine -->
+    <div>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Anstehende Termine</h2>
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Routine-Kontrolle</div>
+                    <div style="font-size: 14px; color: #787774;">15. Dezember 2025, 10:00 Uhr</div>
+                </div>
+                <div style="font-size: 14px; color: #787774;">Dr. Schmidt</div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
