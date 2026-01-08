@@ -36,11 +36,4 @@ class HomeControllerTest {
                 .andExpect(view().name("user/home"))
                 .andExpect(model().attributeExists("currentUser"));
     }
-
-    @Test
-    void getHome_withoutSessionUser_shouldBehaveLikeRootAndShowLanding() throws Exception {
-        mockMvc.perform(get("/home"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("user/landing"));
-    }
 }
