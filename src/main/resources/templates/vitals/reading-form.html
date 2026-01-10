@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Neue Messung – MediTrack</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --mt-bg-shell: #f5fbfd;
+            --mt-bg-header: #002B39;
+            --mt-accent: #11BFD1;
+            --mt-text-main: #012733;
+            --mt-text-muted: #6b7b86;
+            --mt-radius-lg: 18px;
+            --mt-shadow-soft: 0 18px 45px rgba(0,0,0,0.12);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--mt-bg-shell);
+            color: var(--mt-text-main);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .mt-topbar {
+            background: var(--mt-bg-header);
+            color: white;
+            padding: 1rem 1.25rem;
+            display:flex;
+            align-items:center;
+            justify-content: space-between;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .mt-brand {
+            display:flex;
+            align-items:center;
+            gap: .75rem;
+            text-decoration:none;
+            color: white;
+            font-weight: 800;
+            letter-spacing: .2px;
+        }
+
+        .mt-brand-logo-wrap {
+            background: rgba(255,255,255,.12);
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .mt-brand-logo { width: 26px; height: 26px; display:block; }
+
+        .mt-logout-btn {
+            border: 1px solid rgba(255,255,255,.35);
+            background: transparent;
+            color: white;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+            font-weight: 700;
+        }
+        .mt-logout-btn:hover { background: rgba(255,255,255,.08); }
+
+        .mt-main {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 1.25rem 1.25rem 2rem;
+        }
+
+        .mt-card {
+            background: white;
+            border-radius: var(--mt-radius-lg);
+            box-shadow: var(--mt-shadow-soft);
+            padding: 1.1rem 1.1rem 1.25rem;
+        }
+
+        .mt-muted { color: var(--mt-text-muted); }
+
+        .mt-btn-accent {
+            background: var(--mt-accent);
+            border: 0;
+            color: var(--mt-bg-header);
+            font-weight: 700;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+        }
+        .mt-btn-accent:hover { filter: brightness(.95); }
+
+        .mt-btn-ghost {
+            border: 1px solid rgba(0,0,0,.12);
+            background: white;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+            font-weight: 700;
+            color: var(--mt-bg-header);
+        }
+        .mt-btn-ghost:hover { background: rgba(0,0,0,.04); }
+
+        footer { text-align:center; font-size:.85rem; color: var(--mt-text-muted); padding: 1.2rem 0 1.6rem; }
+    </style>
+</head>
+<body>
+
+<header class="mt-topbar">
+    <a class="mt-brand" th:href="@{/home}">
+        <span class="mt-brand-logo-wrap">
+            <img class="mt-brand-logo" th:src="@{/images/meditrack_icon.png}" alt="MediTrack">
+        </span>
+        MediTrack
+    </a>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a class="btn btn-outline-light btn-sm" th:href="@{/alerts}">Alerts</a>
+        <a class="btn btn-outline-light btn-sm" th:href="@{/medication/plans}">Medikation</a>
+        <form th:action="@{/logout}" method="post" style="margin:0;">
+            <button type="submit" class="mt-logout-btn">Abmelden</button>
+        </form>
+    </div>
+</header>
+
+<main class="mt-main">
+    <section class="mt-card">
+
+        <!-- Flash error (z.B. Patient fehlt) -->
+        <div class="alert alert-danger" th:if="${error}" th:text="${error}">Fehler</div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <div>
+                <h2 class="mb-1">Neue Messung</h2>
+
+                <div class="mt-muted">
+                    Patient:
+                    <span class="mt-accent"
+                          th:text="${patientLabel != null && !#strings.isEmpty(patientLabel) ? patientLabel : patientId}">PatientName</span>
+                    <span class="mt-muted" th:if="${patientId != null && !#strings.isEmpty(patientId)}">
+                        (ID: <span th:text="${patientId}">patient-123</span>)
+                    </span>
+                </div>
+
+                <div class="mt-muted">
+                    Erfasse einen Wert – als Patient oder als Staff (z.B. Klinik).
+                </div>
+            </div>
+
+            <a class="mt-btn-ghost text-decoration-none"
+               th:href="@{/vitals/readings}">
+                Zur Liste
+            </a>
+        </div>
+
+        <form class="mt-3" th:action="@{/vitals/readings}" method="post" novalidate>
+
+            <!-- STAFF/ADMIN: Patient auswählen -->
+            <div class="mb-3" th:if="${canSelectPatient}">
+                <label class="form-label" for="patientIdSelect">Patient</label>
+                <select id="patientIdSelect" class="form-select" name="patientId" required>
+                    <option value="" th:selected="${patientId == null or #strings.isEmpty(patientId)}" disabled>Bitte auswählen…</option>
+                    <option th:each="p : ${patients}"
+                            th:value="${p.id}"
+                            th:text="${p.label}"
+                            th:selected="${p.id == patientId}"></option>
+                </select>
+                <div class="form-text mt-1">
+                    Staff/Admin kann hier einen Patienten auswählen (Klinik-Erfassung).
+                </div>
+            </div>
+
+            <!-- PATIENT: hidden -->
+            <input type="hidden" name="patientId" th:if="${!canSelectPatient}" th:value="${patientId}"/>
+
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label" for="vitalType">Vitaltyp</label>
+                    <select id="vitalType" class="form-select" name="vitalType" required>
+                        <option value="" disabled selected>Bitte auswählen…</option>
+                        <option th:each="t : ${types}" th:value="${t}" th:text="${t}"></option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="valueNumeric">Wert</label>
+                    <input id="valueNumeric" class="form-control" type="number" step="0.01" name="valueNumeric" required>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label" for="unit">Einheit</label>
+                    <select id="unit" class="form-select" name="unit" required>
+                        <option value="" disabled selected>Bitte auswählen…</option>
+                        <option th:each="u : ${units}" th:value="${u}" th:text="${u}"></option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-muted small mt-3">
+                Hinweis: Diese Messung kann anschließend im System (Alerts/Verlauf/Monitoring) verarbeitet werden.
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button class="mt-btn-accent" type="submit">Messung speichern</button>
+                <a class="mt-btn-ghost text-decoration-none" th:href="@{/vitals/readings}">Abbrechen</a>
+            </div>
+        </form>
+
+    </section>
+</main>
+
+<footer>
+    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> MediTrack
+</footer>
+
+</body>
+</html>
