@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}">MediTrack – Digitale Patientenverwaltung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+            integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+            crossorigin="anonymous"
+    >
+
+    <style>
+        :root {
+            --mt-accent: #11BFD1;
+            --mt-accent-soft: #0EA5B8;
+            --mt-bg-dark: #002B39;
+            --mt-page-bg: #F4FBFD;
+            --mt-card-bg: #FFFFFF;
+            --mt-border: #D0E4EA;
+            --mt-text: #002B39;
+            --mt-text-muted: #607D86;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--mt-page-bg);
+            color: var(--mt-text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .navbar.mt-navbar {
+            background-color: var(--mt-bg-dark);
+        }
+
+        .navbar.mt-navbar .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+        }
+
+        .navbar.mt-navbar .navbar-brand img {
+            height: 32px;
+            width: auto;
+        }
+
+        .mt-navbar .btn-outline-light {
+            border-color: var(--mt-accent);
+            color: var(--mt-accent);
+        }
+
+        .mt-navbar .btn-outline-light:hover {
+            background-color: var(--mt-accent);
+            color: var(--mt-bg-dark);
+        }
+
+        .mt-navbar .btn-accent {
+            background-color: var(--mt-accent);
+            border-color: var(--mt-accent);
+            color: var(--mt-bg-dark);
+            font-weight: 600;
+        }
+
+        .mt-navbar .btn-accent:hover {
+            background-color: var(--mt-accent-soft);
+            border-color: var(--mt-accent-soft);
+        }
+
+        .main-section {
+            min-height: calc(100vh - 64px);
+            display: flex;
+            align-items: center;
+            padding: 40px 16px 32px;
+        }
+
+        .hero-card {
+            background-color: var(--mt-card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--mt-border);
+            box-shadow: 0 18px 35px rgba(0, 0, 0, 0.08);
+            padding: 32px 32px 28px;
+        }
+
+        .hero-logo {
+            max-width: 260px;
+            height: auto;
+        }
+
+        .hero-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(17, 191, 209, 0.08);
+            border: 1px solid rgba(17, 191, 209, 0.4);
+            font-size: 0.8rem;
+            color: var(--mt-accent);
+            font-weight: 500;
+        }
+
+        .btn-accent-primary {
+            background-color: var(--mt-accent);
+            border-color: var(--mt-accent);
+            color: var(--mt-bg-dark);
+            font-weight: 600;
+        }
+
+        .btn-accent-primary:hover {
+            background-color: var(--mt-accent-soft);
+            border-color: var(--mt-accent-soft);
+        }
+
+        .text-accent {
+            color: var(--mt-accent);
+        }
+
+        .text-muted {
+            color: var(--mt-text-muted) !important;
+        }
+
+        .footer {
+            padding: 16px 0 24px;
+            font-size: 0.85rem;
+            color: var(--mt-text-muted);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark mt-navbar">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">
+            <img th:src="@{/images/meditrack_icon.png}" alt="MediTrack Icon">
+            <span>MediTrack</span>
+        </a>
+
+        <div class="ms-auto d-flex gap-2">
+            <a class="btn btn-sm btn-outline-light" th:href="@{/login}">Login</a>
+            <a class="btn btn-sm btn-accent" th:href="@{/register}">Registrieren</a>
+        </div>
+    </div>
+</nav>
+
+<main class="main-section">
+    <div class="container">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-6">
+                <div class="hero-card mb-4 mb-lg-0">
+                    <div class="hero-pill mb-3">
+                        <span class="badge rounded-pill bg-transparent border-0 text-accent">
+                            Neu
+                        </span>
+                        Digitale Patientenverwaltung für den Alltag
+                    </div>
+
+                    <h1 class="fw-bold mb-3">
+                        Behalte deine <span class="text-accent">Medikamente</span> und
+                        <span class="text-accent">Werte</span> im Blick.
+                    </h1>
+
+                    <p class="lead text-muted mb-4">
+                        MediTrack unterstützt dich dabei, Medikamente, Dosierungen und Messwerte
+                        übersichtlich zu verwalten – überall und jederzeit.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-3 align-items-center mb-4">
+                        <a class="btn btn-lg btn-accent-primary px-4" th:href="@{/register}">
+                            Jetzt kostenlos starten
+                        </a>
+                        <a class="btn btn-link text-decoration-none text-accent" th:href="@{/login}">
+                            Bereits registriert? Zum Login
+                        </a>
+                    </div>
+
+                    <div class="row g-3 text-muted small">
+                        <div class="col-6">
+                            <strong class="d-block text-accent">Schneller Überblick</strong>
+                            Medikationsplan, Erinnerungen &amp; Notizen an einem Ort.
+                        </div>
+                        <div class="col-6">
+                            <strong class="d-block text-accent">Sicher gespeichert</strong>
+                            Deine Daten bleiben unter deiner Kontrolle.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5 offset-lg-1 text-center">
+                <img th:src="@{/images/meditrack_logo.png}"
+                     alt="MediTrack Logo"
+                     class="hero-logo mb-3">
+                <p class="text-muted">
+                    Entwickelt, um den Alltag mit Medikamenten und Therapien einfacher zu machen.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer mt-4">
+            &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2026</span> MediTrack
+        </div>
+    </div>
+</main>
+
+</body>
+</html>
