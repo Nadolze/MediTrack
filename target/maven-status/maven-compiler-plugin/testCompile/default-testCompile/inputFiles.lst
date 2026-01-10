@@ -1,9 +1,0 @@
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\user\domain\entity\UserTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\shared\infrastructure\RoleBootstrapperTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\medication\api\MedicationPlanControllerTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\shared\api\HomeControllerTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\medication\application\MedicationPlanServiceTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\shared\infrastructure\DatabaseCreateTablesTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\user\infrastructure\persistence\JpaUserRepositoryTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\user\api\UserControllerTest.java
-C:\Users\micro\IdeaProjects\MediTrack\src\test\java\com\meditrack\user\application\service\UserApplicationServiceTest.java

@@ -14,6 +14,7 @@
             --mt-accent: #11BFD1;
             --mt-text-main: #012733;
             --mt-text-muted: #6b7b86;
+            --mt-bg-dark: #002B39;
             --mt-radius-lg: 18px;
             --mt-shadow-soft: 0 18px 45px rgba(0,0,0,0.12);
         }
@@ -23,7 +24,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            background: var(--mt-bg-shell);
+            background: var(--mt-bg-dark);
             color: var(--mt-text-main);
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
@@ -39,6 +40,7 @@
             position: sticky;
             top: 0;
             z-index: 50;
+            border-bottom: 2px solid var(--mt-accent);
         }
 
         .mt-brand {
@@ -92,6 +94,18 @@
         }
 
         .mt-muted { color: var(--mt-text-muted); }
+
+        .footer {
+            padding: 16px 0 24px;
+            font-size: 0.85rem;
+            text-align: center;
+            background: var(--mt-bg-dark);
+            color: rgba(255, 255, 255, 0.9);
+            border-top: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .mt-btn-accent { background: var(--mt-accent); border: 0; color: var(--mt-bg-header); font-weight: 700; border-radius: 10px; padding: .55rem .9rem; }
+        .mt-btn-accent:hover { filter: brightness(.95); }
     </style>
 </head>
 <body>
@@ -149,7 +163,7 @@
                 </select>
             </div>
             <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-primary w-100" type="submit">Alerts anzeigen</button>
+                <button class="mt-btn-accent text-decoration-none w-100" type="submit">Alerts anzeigen</button>
             </div>
         </form>
 
@@ -201,7 +215,13 @@
             </div>
         </div>
 
+
+
     </section>
+    <!-- NEU: Footer ist jetzt dunkel + weißer Text -->
+    <div class="footer mt-4">
+        &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2026</span> MediTrack
+    </div>
 </main>
 
 </body>

@@ -13,6 +13,7 @@
             --mt-bg-shell: #f5fbfd;
             --mt-bg-header: #002B39;
             --mt-accent: #11BFD1;
+            --mt-bg-dark: #002B39;
             --mt-text-main: #012733;
             --mt-text-muted: #6b7b86;
             --mt-radius-lg: 18px;
@@ -24,7 +25,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            background: var(--mt-bg-shell);
+            background: var(--mt-bg-dark);
             color: var(--mt-text-main);
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
@@ -40,6 +41,7 @@
             position: sticky;
             top: 0;
             z-index: 50;
+            border-bottom: 2px solid var(--mt-accent);
         }
 
         .mt-brand {
@@ -156,7 +158,7 @@
         footer {
             text-align:center;
             font-size:.85rem;
-            color: var(--mt-text-muted);
+            color: rgba(255, 255, 255, 0.9);
             padding: 1.2rem 0 1.6rem;
         }
     </style>
@@ -313,10 +315,15 @@
 
             <div class="mt-panel-subtitle">
                 <ul class="mb-0">
-                    <li>Login / Logout: OK</li>
-                    <li>BCs: user, medication, vitals, ...</li>
-                    <li>Build: verify (maven) grün</li>
+                    <li><strong>Auth &amp; Rollen:</strong> Session-Login, BCrypt; Rollen: PATIENT, STAFF, ADMIN</li>
+                    <li><strong>BCs aktiv:</strong> user, vitals, medication, alerts (Alerts/Events basieren auf vitals)</li>
+                    <li><strong>BCs geplant:</strong> coredata, assignment, history (derzeit Skeleton)</li>
+                    <li><strong>UI/Navigation:</strong> Menü-/Header-Struktur ist noch nicht einheitlich (Vereinheitlichung der Templates folgt)</li>
+                    <li><strong>Datenbank:</strong> MySQL im Betrieb; Tests mit H2 (In-Memory). Schema/Seed erfolgt per eigenem Bootstrap (kein Hibernate <code>ddl-auto</code>). Umstellung auf <strong>InnoDB</strong> steht noch aus.</li>
+                    <li><strong>Build &amp; Tests:</strong> JUnit 5 / Spring Boot Test; GitHub Actions: <code>mvn clean test</code></li>
+                    <li><strong>Nächster BC:</strong> <strong>assignment</strong></li>
                 </ul>
+
             </div>
         </aside>
     </div>

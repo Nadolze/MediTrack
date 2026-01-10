@@ -14,6 +14,7 @@
             --mt-accent: #11BFD1;
             --mt-text-main: #012733;
             --mt-text-muted: #6b7b86;
+            --mt-bg-dark: #002B39;
             --mt-radius-lg: 18px;
             --mt-shadow-soft: 0 18px 45px rgba(0,0,0,0.12);
         }
@@ -21,7 +22,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            background: var(--mt-bg-shell);
+            background: var(--mt-bg-dark);
             color: var(--mt-text-main);
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
@@ -37,6 +38,7 @@
             position: sticky;
             top: 0;
             z-index: 50;
+            border-bottom: 2px solid var(--mt-accent);
         }
 
         .mt-brand {
@@ -93,7 +95,7 @@
 
         .mt-accent { color: var(--mt-accent); font-weight: 700; }
 
-        footer { text-align:center; font-size:.85rem; color: var(--mt-text-muted); padding: 1.2rem 0 1.6rem; }
+        footer { text-align:center; font-size:.85rem; color: rgba(255, 255, 255, 0.9); padding: 1.2rem 0 1.6rem; }
     </style>
 </head>
 <body>
