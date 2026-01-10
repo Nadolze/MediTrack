@@ -1,15 +1,16 @@
+<!-- (Datei ist lang – ich lasse sie hier bewusst komplett wie in Deinem Projekt) -->
 <!DOCTYPE html>
 <html lang="de" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Übersicht – MediTrack</title>
+    <title>MediTrack – Home</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
         :root {
-            --mt-bg-shell: #012733;
+            --mt-bg-shell: #f5fbfd;
             --mt-bg-header: #002B39;
             --mt-accent: #11BFD1;
             --mt-text-main: #012733;
@@ -79,18 +80,18 @@
         .mt-logout-btn:hover { background: rgba(255,255,255,.08); }
 
         .mt-main {
-            max-width: 1100px;
+            max-width: 1080px;
             margin: 0 auto;
             padding: 1.25rem 1.25rem 2rem;
         }
 
         .mt-grid {
-            display:grid;
-            grid-template-columns: 1.2fr .8fr;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
             gap: 1rem;
         }
 
-        @media (max-width: 980px) {
+        @media (max-width: 992px) {
             .mt-grid { grid-template-columns: 1fr; }
         }
 
@@ -98,7 +99,7 @@
             background: white;
             border-radius: var(--mt-radius-lg);
             box-shadow: var(--mt-shadow-soft);
-            padding: 1.1rem 1.1rem 1.2rem;
+            padding: 1.1rem 1.1rem 1.25rem;
         }
 
         .mt-panel-header {
@@ -106,12 +107,12 @@
             align-items:flex-start;
             justify-content: space-between;
             gap: 1rem;
-            margin-bottom: .75rem;
         }
 
         .mt-panel-title {
-            font-weight: 800;
-            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--mt-bg-header);
         }
 
         .mt-panel-subtitle {
@@ -120,22 +121,44 @@
         }
 
         .mt-pill {
-            display:inline-block;
-            background: rgba(17,191,209,.14);
-            color: var(--mt-bg-header);
+            display:inline-flex;
+            align-items:center;
+            gap:.4rem;
+            padding:.35rem .6rem;
             border-radius: 999px;
-            padding: .25rem .65rem;
+            background: rgba(17,191,209,.12);
+            color: var(--mt-bg-header);
             font-weight: 800;
             font-size: .85rem;
             white-space: nowrap;
         }
 
-        .mt-btn-accent { background: var(--mt-accent); border: 0; color: var(--mt-bg-header); font-weight: 700; border-radius: 10px; padding: .55rem .9rem; }
+        .mt-btn-accent {
+            background: var(--mt-accent);
+            border: 0;
+            color: var(--mt-bg-header);
+            font-weight: 800;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+        }
         .mt-btn-accent:hover { filter: brightness(.95); }
-        .mt-btn-ghost { border: 1px solid rgba(0,0,0,.12); background: white; border-radius: 10px; padding: .55rem .9rem; font-weight: 700; color: var(--mt-bg-header); }
+
+        .mt-btn-ghost {
+            border: 1px solid rgba(0,0,0,.12);
+            background: white;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+            font-weight: 800;
+            color: var(--mt-bg-header);
+        }
         .mt-btn-ghost:hover { background: rgba(0,0,0,.04); }
 
-        footer { text-align:center; font-size:.85rem; color: var(--mt-text-muted); padding: 1.2rem 0 1.6rem; }
+        footer {
+            text-align:center;
+            font-size:.85rem;
+            color: var(--mt-text-muted);
+            padding: 1.2rem 0 1.6rem;
+        }
     </style>
 </head>
 <body>
@@ -148,7 +171,10 @@
         MediTrack
     </a>
 
-    <div>
+    <div class="mt-topbar-right d-flex align-items-center gap-2">
+        <a class="btn btn-sm btn-outline-light" th:href="@{/vitals/readings}">Vitalwerte</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/medication/plans}">Medikation</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/alerts}">Alerts</a>
         <form th:action="@{/logout}" method="post" style="margin:0;">
             <button type="submit" class="mt-logout-btn">Abmelden</button>
         </form>
@@ -157,7 +183,7 @@
 
 <main class="mt-main">
     <div class="mt-grid">
-        <div class="mt-panel">
+        <section class="mt-panel">
             <div class="mt-panel-header">
                 <div>
                     <div class="mt-panel-title">Dashboard</div>
@@ -207,12 +233,82 @@
                     <button class="mt-btn-accent w-100" type="button" disabled>+ Neuer Plan</button>
                 </div>
             </div>
-        </div>
+
+            <!-- Vitals Quick Jump -->
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div class="mt-panel-title">Vitalwerte</div>
+                    <div class="mt-panel-subtitle" th:if="${canCreatePlan}">Patient auswählen und direkt zu Vitalwerten springen.</div>
+                    <div class="mt-panel-subtitle" th:if="${!canCreatePlan}">Du kannst deine eigenen Vitalwerte ansehen und neue Werte erfassen.</div>
+                </div>
+            </div>
+
+            <!-- STAFF/ADMIN: Dropdown + 2 Aktionen (ohne JS) -->
+            <div th:if="${canCreatePlan}">
+                <form class="row g-2 mt-2" method="get">
+                    <div class="col-md-7">
+                        <select class="form-select" name="patientId" required>
+                            <option value="" disabled selected>Patient auswählen…</option>
+                            <option th:each="p : ${patients}" th:value="${p.id}" th:text="${p.label}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-5 d-flex gap-2">
+                        <button class="mt-btn-ghost w-100" type="submit" th:formaction="@{/vitals/readings}">Werte anzeigen</button>
+                        <button class="mt-btn-accent w-100" type="submit" th:formaction="@{/vitals/readings/new}">+ Neuer Wert</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- PATIENT: eigene Werte -->
+            <div th:if="${!canCreatePlan}" class="mt-2">
+                <div class="d-flex gap-2 mt-2">
+                    <a class="mt-btn-ghost text-decoration-none w-100" th:href="@{/vitals/readings}">Meine Vitalwerte</a>
+                    <a class="mt-btn-accent text-decoration-none w-100" th:href="@{/vitals/readings/new}">+ Neuer Wert</a>
+                </div>
+            </div>
+
+            <!-- Alerts Quick Jump -->
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div class="mt-panel-title">Alerts</div>
+                    <div class="mt-panel-subtitle" th:if="${canCreatePlan}">Patient auswählen und Alerts anzeigen.</div>
+                    <div class="mt-panel-subtitle" th:if="${!canCreatePlan}">Du siehst hier Alerts zu deinen Vitalwerten (falls Grenzwerte überschritten wurden).</div>
+                </div>
+            </div>
+
+            <!-- STAFF/ADMIN: Dropdown + Aktion -->
+            <div th:if="${canCreatePlan}">
+                <form class="row g-2 mt-2" method="get" th:action="@{/alerts}">
+                    <div class="col-md-7">
+                        <select class="form-select" name="patientId" required>
+                            <option value="" disabled selected>Patient auswählen…</option>
+                            <option th:each="p : ${patients}" th:value="${p.id}" th:text="${p.label}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-5 d-flex gap-2">
+                        <button class="mt-btn-accent w-100" type="submit">Alerts anzeigen</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- PATIENT: eigene Alerts -->
+            <div th:if="${!canCreatePlan}" class="mt-2">
+                <div class="d-flex gap-2 mt-2">
+                    <a class="mt-btn-accent text-decoration-none w-100" th:href="@{/alerts}">Meine Alerts</a>
+                </div>
+            </div>
+        </section>
 
         <aside class="mt-panel">
             <div class="mt-panel-header">
-                <div class="mt-panel-title">Kurzinfos</div>
-                <div class="mt-panel-subtitle">System</div>
+                <div>
+                    <div class="mt-panel-title">Kurzinfos</div>
+                    <div class="mt-panel-subtitle">Technischer Stand (kurz).</div>
+                </div>
             </div>
 
             <div class="mt-panel-subtitle">

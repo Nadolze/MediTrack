@@ -13,7 +13,7 @@ class ThresholdCatalogTest {
         ThresholdCatalog catalog = new ThresholdCatalog();
 
         var pulse = catalog.warning(VitalType.PULSE);
-        assertThat(pulse.minInclusive()).isNull();
+        assertThat(pulse.minInclusive()).isEqualTo(50.0);
         assertThat(pulse.maxInclusive()).isEqualTo(110.0);
 
         var sys = catalog.warning(VitalType.BLOOD_PRESSURE_SYSTOLIC);

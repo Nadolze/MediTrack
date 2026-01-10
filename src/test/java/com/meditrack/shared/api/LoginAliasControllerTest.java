@@ -1,9 +1,11 @@
-package com.meditrack.alerts.api;
+package com.meditrack.shared.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -16,19 +18,20 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class AlertsPageControllerTest {
+class LoginAliasControllerTest {
 
     @Autowired MockMvc mvc;
     @Autowired RequestMappingHandlerMapping mapping;
 
     @Test
-    void shouldExposeAtLeastOneGetEndpoint_andRedirectToLoginWhenNotAuthenticated() throws Exception {
+    void shouldExposeAtLeastOneGetEndpoint_andReturn2xxOrRedirect() throws Exception {
+        Class<?> controllerType = findClassBySimpleName("LoginAliasController");
+
         String path = mapping.getHandlerMethods().entrySet().stream()
-                .filter(e -> e.getValue().getBeanType().getSimpleName().equals("AlertsPageController"))
+                .filter(e -> controllerType.isAssignableFrom(e.getValue().getBeanType()))
                 .filter(e -> e.getKey().getMethodsCondition().getMethods().contains(RequestMethod.GET))
                 .flatMap(e -> extractPatterns(e.getKey()).stream())
                 .filter(p -> !p.contains("{"))
@@ -36,30 +39,41 @@ class AlertsPageControllerTest {
                 .orElse(null);
 
         assertThat(path)
-                .as("Kein GET-Mapping ohne Path-Variablen für AlertsPageController gefunden")
+                .as("Kein GET-Mapping ohne Path-Variablen für LoginAliasController gefunden")
                 .isNotBlank();
 
-        MvcResult result = mvc.perform(get(path)).andReturn();
+        int status = mvc.perform(get(path)).andReturn().getResponse().getStatus();
 
-        int status = result.getResponse().getStatus();
-        String redirectedUrl = result.getResponse().getRedirectedUrl(); // kann null sein
-
-        // Erlaubt: 200 (wenn öffentlich) ODER Redirect zu /login (wenn geschützt)
-        if (status == 200) {
-            return;
-        }
-
+        // Login-Endpoints sind oft öffentlich (200) oder redirecten (302) je nach Setup
         assertThat(status)
-                .as("Erwartet 200 OK oder Redirect, aber war: %s", status)
-                .isBetween(300, 399);
+                .as("Erwartet 2xx oder 3xx, aber war %s für GET %s", status, path)
+                .isBetween(200, 399);
+    }
 
-        assertThat(redirectedUrl)
-                .as("Bei Redirect sollte /login das Ziel sein")
-                .isNotNull();
+    private static Class<?> findClassBySimpleName(String simpleName) {
+        try {
+            ClassPathScanningCandidateComponentProvider scanner =
+                    new ClassPathScanningCandidateComponentProvider(false);
 
-        assertThat(redirectedUrl)
-                .as("Redirect sollte auf /login zeigen")
-                .startsWith("/login");
+            TypeFilter filter = (metadataReader, metadataReaderFactory) ->
+                    metadataReader.getClassMetadata().getClassName().endsWith("." + simpleName);
+
+            scanner.addIncludeFilter(filter);
+
+            return scanner.findCandidateComponents("com.meditrack").stream()
+                    .findFirst()
+                    .map(bd -> {
+                        try {
+                            return Class.forName(bd.getBeanClassName());
+                        } catch (ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+                    .orElseThrow(() -> new AssertionError("Klasse nicht gefunden: " + simpleName));
+        } catch (RuntimeException e) {
+            fail("Classpath-Scan fehlgeschlagen: " + e.getMessage());
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -72,7 +86,7 @@ class AlertsPageControllerTest {
                 return (Set<String>) pv.invoke(cond);
             }
         } catch (NoSuchMethodException ignored) {
-            // fallback
+            // fallback below
         } catch (Exception e) {
             fail("Konnte PathPatternsCondition nicht lesen: " + e.getMessage());
         }

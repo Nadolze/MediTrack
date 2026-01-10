@@ -1,5 +1,7 @@
 package com.meditrack.vitals.domain.entity;
 
+import com.meditrack.vitals.domain.valueobject.*;
+
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;

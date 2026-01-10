@@ -5,6 +5,7 @@ import com.meditrack.vitals.application.dto.VitalReadingSummaryDto;
 import com.meditrack.vitals.domain.entity.VitalReading;
 import com.meditrack.vitals.domain.events.VitalReadingCreatedEvent;
 import com.meditrack.vitals.domain.repository.VitalReadingRepository;
+import com.meditrack.vitals.domain.valueobject.*;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;

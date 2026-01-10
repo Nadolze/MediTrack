@@ -15,17 +15,17 @@ public class ThresholdCatalog {
 
     public ThresholdCatalog() {
         // WARNING
-        warningUpper.put(VitalType.BLOOD_PRESSURE_SYSTOLIC, Threshold.minMax(null, 160.0));
-        warningUpper.put(VitalType.BLOOD_PRESSURE_DIASTOLIC, Threshold.minMax(null, 100.0));
-        warningUpper.put(VitalType.PULSE, Threshold.minMax(null, 110.0));
-        warningUpper.put(VitalType.TEMPERATURE, Threshold.minMax(null, 38.5));
+        warningUpper.put(VitalType.BLOOD_PRESSURE_SYSTOLIC, Threshold.minMax(90.0, 160.0));
+        warningUpper.put(VitalType.BLOOD_PRESSURE_DIASTOLIC, Threshold.minMax(60.0, 100.0));
+        warningUpper.put(VitalType.PULSE, Threshold.minMax(50.0, 110.0));
+        warningUpper.put(VitalType.TEMPERATURE, Threshold.minMax(35.0, 38.5));
         warningUpper.put(VitalType.OXYGEN_SATURATION, Threshold.minMax(92.0, null)); // MIN wichtig
 
         // CRITICAL
-        criticalUpper.put(VitalType.BLOOD_PRESSURE_SYSTOLIC, Threshold.minMax(null, 180.0));
-        criticalUpper.put(VitalType.BLOOD_PRESSURE_DIASTOLIC, Threshold.minMax(null, 120.0));
-        criticalUpper.put(VitalType.PULSE, Threshold.minMax(null, 130.0));
-        criticalUpper.put(VitalType.TEMPERATURE, Threshold.minMax(null, 39.5));
+        criticalUpper.put(VitalType.BLOOD_PRESSURE_SYSTOLIC, Threshold.minMax(80.0, 180.0));
+        criticalUpper.put(VitalType.BLOOD_PRESSURE_DIASTOLIC, Threshold.minMax(50.0, 120.0));
+        criticalUpper.put(VitalType.PULSE, Threshold.minMax(40.0, 130.0));
+        criticalUpper.put(VitalType.TEMPERATURE, Threshold.minMax(32.0, 39.5));
         criticalUpper.put(VitalType.OXYGEN_SATURATION, Threshold.minMax(88.0, null)); // MIN wichtig
     }
 
