@@ -17,7 +17,7 @@
             --mt-accent: #11BFD1;
             --mt-accent-soft: #0EA5B8;
             --mt-bg-dark: #002B39;
-            --mt-page-bg: #F4FBFD;
+            --mt-page-bg: #002B39;
             --mt-card-bg: #FFFFFF;
             --mt-border: #D0E4EA;
             --mt-text: #002B39;
@@ -34,6 +34,9 @@
 
         .navbar.mt-navbar {
             background-color: var(--mt-bg-dark);
+
+            /* NEU: kleiner abgrenzender Border in Akzent-Farbe */
+            border-bottom: 2px solid var(--mt-accent);
         }
 
         .navbar.mt-navbar .navbar-brand {
@@ -123,11 +126,31 @@
             color: var(--mt-text-muted) !important;
         }
 
+        /* =========================
+           NEU: Nur rechts beim Logo + Footer dunkel
+           ========================= */
+
+        /* Hintergrund nur für die rechte Spalte (Logo + Text) */
+        .mt-logo-slab {
+            background: var(--mt-bg-dark);
+            border-radius: 16px;
+            padding: 22px 18px;
+        }
+
+        /* Text auf dunklem Hintergrund weiß */
+        .mt-logo-slab p,
+        .mt-logo-slab .mt-on-dark {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        /* Footer dunkel + weiß */
         .footer {
             padding: 16px 0 24px;
             font-size: 0.85rem;
-            color: var(--mt-text-muted);
             text-align: center;
+            background: var(--mt-bg-dark);
+            color: rgba(255, 255, 255, 0.9);
+            border-top: 1px solid rgba(255,255,255,0.12);
         }
     </style>
 </head>
@@ -191,16 +214,21 @@
                 </div>
             </div>
 
+            <!-- NEU: mt-logo-slab sorgt dafür, dass NUR hier der Hintergrund dunkel ist -->
             <div class="col-lg-5 offset-lg-1 text-center">
-                <img th:src="@{/images/meditrack_logo.png}"
-                     alt="MediTrack Logo"
-                     class="hero-logo mb-3">
-                <p class="text-muted">
-                    Entwickelt, um den Alltag mit Medikamenten und Therapien einfacher zu machen.
-                </p>
+                <div class="mt-logo-slab">
+                    <img th:src="@{/images/meditrack_logo.png}"
+                         alt="MediTrack Logo"
+                         class="hero-logo mb-3">
+                    <!-- NEU: Text wird weiß wegen mt-logo-slab -->
+                    <p class="mt-on-dark mb-0">
+                        Entwickelt, um den Alltag mit Medikamenten und Therapien einfacher zu machen.
+                    </p>
+                </div>
             </div>
         </div>
 
+        <!-- NEU: Footer ist jetzt dunkel + weißer Text -->
         <div class="footer mt-4">
             &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2026</span> MediTrack
         </div>
