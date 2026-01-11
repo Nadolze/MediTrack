@@ -13,7 +13,16 @@ import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
-
+/**
+ * Smoke- und Robustheitstest für den PatientRepairRunner.
+ *
+ * Ziel:
+ * - sicherstellen, dass PatientRepairRunner als Spring-Bean registriert ist
+ * - verifizieren, dass der Runner mit leeren Argumenten ausführbar ist
+ *   (ApplicationRunner / CommandLineRunner / run()-Fallback)
+ * - frühzeitiges Erkennen von fehlerhaften Konstruktoren oder
+ *   nicht robustem Startverhalten beim Application-Bootstrap
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class PatientRepairRunnerTest {
 

@@ -10,7 +10,14 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
-
+/**
+ * Unit-Test für den String → LocalDate Converter.
+ *
+ * Ziel:
+ * - prüfen, dass die Klasse org.springframework.core.convert.converter.Converter implementiert
+ * - sicherstellen, dass ISO-Datumsstrings korrekt in LocalDate konvertiert werden
+ * - ungültige Strings führen zu null oder einer Exception (kein falsches Datum)
+ */
 class StringToLocalDateConverterTest {
 
     @Test

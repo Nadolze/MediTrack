@@ -6,7 +6,14 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * Integrationstest für die PasswordEncoder-Konfiguration.
+ *
+ * Ziel:
+ * - sicherstellen, dass mindestens ein PasswordEncoder als Spring-Bean registriert ist
+ * - verifizieren, dass der Encoder Passwörter korrekt hasht
+ * - prüfen, dass matches() für korrektes und falsches Passwort erwartungsgemäß funktioniert
+ */
 @SpringBootTest
 class PasswordEncoderConfigTest {
 
