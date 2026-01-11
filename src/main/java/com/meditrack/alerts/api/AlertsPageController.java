@@ -16,7 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * MVC endpoint for rendering alerts via Thymeleaf.
+ * MVC-Controller für die Alert-Übersichtsseite (Thymeleaf).
  *
  * Verhalten:
  * - PATIENT sieht automatisch seine eigenen Alerts
@@ -27,6 +27,7 @@ public class AlertsPageController {
 
     private final AlertService alertService;
 
+    // Optionaler JdbcTemplate für einfache DB-Zugriffe.
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
@@ -34,8 +35,13 @@ public class AlertsPageController {
         this.alertService = alertService;
     }
 
+    // DTO für Patientenauswahl im UI.
     public record PatientOption(String id, String label) {}
 
+    /**
+     * Rendert die Alert-Liste.
+     * Patientenkontext wird abhängig von der Rolle bestimmt.
+     */
     @GetMapping("/alerts")
     public String list(
             @RequestParam(value = "patientId", required = false) String patientIdParam,
@@ -49,6 +55,7 @@ public class AlertsPageController {
 
         boolean canSelectPatient = user.hasAnyRole("ADMIN", "STAFF");
 
+        // Bestimme effektiven Patientenkontext
         String effectivePatientId;
         if (canSelectPatient) {
             effectivePatientId = (patientIdParam == null) ? "" : patientIdParam.trim();
@@ -57,6 +64,7 @@ public class AlertsPageController {
             effectivePatientId = user.getUserId();
         }
 
+        // Alerts nur laden, wenn ein Patient gewählt ist
         List<AlertSummaryDto> alerts = effectivePatientId.isBlank()
                 ? List.of()
                 : alertService.listForPatient(effectivePatientId);
@@ -69,6 +77,10 @@ public class AlertsPageController {
         return "alerts/alert-list";
     }
 
+    /**
+     * Lädt Patienten für die Auswahl (STAFF/ADMIN).
+     * Rein für UI-Zwecke, fachlich unkritisch.
+     */
     private List<PatientOption> loadPatientsIfPossible() {
         if (jdbcTemplate == null) {
             return Collections.emptyList();
