@@ -23,6 +23,7 @@ public class UserApplicationService {
     private final JpaUserRepository jpaUserRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // Optionaler JdbcTemplate für einfache DB-Zugriffe.
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
@@ -32,11 +33,22 @@ public class UserApplicationService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Registriert einen neuen Benutzer.
+     *
+     * Ablauf:
+     * - Validierung der Eingabedaten
+     * - Prüfung auf Eindeutigkeit von Benutzername und E-Mail
+     * - Erzeugung eines Domain-Users
+     * - Persistenz als JPA-Entity inkl. Passwort-Hash
+     * - Sicherstellen eines korrespondierenden Patient-Datensatzes
+     */
     public User registerUser(UserRegistrationDto dto) {
         if (dto == null) {
             throw new IllegalArgumentException("Registrierungsdaten fehlen.");
         }
 
+        // Extraktion und Validierung der Daten
         String username = dto.getUsername();
         String email = dto.getEmail();
         String password = dto.getPassword();
@@ -58,6 +70,7 @@ public class UserApplicationService {
             throw new IllegalArgumentException("Benutzername ist bereits vergeben.");
         }
 
+        // Erzeugung des Domain-Objekts
         User user = new User(UserId.generate(), username, email, UserRole.PATIENT);
         String hash = passwordEncoder.encode(password);
 
@@ -78,10 +91,17 @@ public class UserApplicationService {
         return user;
     }
 
+
     public boolean login(String usernameOrEmail, String password) {
         return authenticate(usernameOrEmail, password).isPresent();
     }
 
+    /**
+     * Authentifiziert einen Benutzer anhand von
+     * Benutzername oder E-Mail und Passwort.
+     *
+     * @return Optional<UserSession> bei Erfolg, sonst Optional.empty()
+     */
     public Optional<UserSession> authenticate(String usernameOrEmail, String password) {
         if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
             return Optional.empty();
@@ -90,6 +110,7 @@ public class UserApplicationService {
             return Optional.empty();
         }
 
+        // Benutzer suchen
         Optional<UserEntityJpa> userOpt = jpaUserRepository.findByEmail(usernameOrEmail);
         if (userOpt.isEmpty()) {
             userOpt = jpaUserRepository.findByName(usernameOrEmail);
@@ -100,6 +121,7 @@ public class UserApplicationService {
 
         UserEntityJpa entity = userOpt.get();
 
+        // Passwort-Hash prüfen
         String storedHash = entity.getPasswordHash();
         if (storedHash == null || storedHash.isBlank()) {
             return Optional.empty();
@@ -109,6 +131,7 @@ public class UserApplicationService {
             return Optional.empty();
         }
 
+        // Fallback auf Default-Rolle
         String role = (entity.getRole() == null || entity.getRole().isBlank())
                 ? UserRole.PATIENT.name()
                 : entity.getRole();
@@ -121,6 +144,10 @@ public class UserApplicationService {
         ));
     }
 
+    /**
+     * Stellt sicher, dass ein korrespondierender
+     * Datensatz in mt_patient existiert.
+     */
     private void ensurePatientRowExists(String userId, String username) {
         if (jdbcTemplate == null || userId == null || userId.isBlank()) {
             return;
