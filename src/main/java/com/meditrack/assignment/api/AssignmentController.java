@@ -26,9 +26,11 @@ public class AssignmentController {
 
     private final AssignmentService assignmentService;
 
+    // Optionaler JdbcTemplate für einfache DB-Zugriffe.
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
+    // UI-DTOs für Select-Optionen
     public record PatientOption(String id, String label) {}
     public record StaffOption(String id, String label) {}
 
@@ -36,6 +38,12 @@ public class AssignmentController {
         this.assignmentService = assignmentService;
     }
 
+    /**
+     * Listet aktive Zuweisungen für einen Patienten.
+     *
+     * - STAFF/ADMIN: Patient wählbar (Session merkt aktiven Patientenkontext)
+     * - PATIENT: Patient ist implizit der eingeloggte User
+     */
     @GetMapping("/assignment")
     public String list(
             @RequestParam(name = "patientId", required = false) String patientId,
@@ -70,6 +78,10 @@ public class AssignmentController {
         return "assignment/assignment-list";
     }
 
+    /**
+     * Erstellt eine neue Zuweisung Patient ↔ Staff.
+     * Nur für STAFF/ADMIN erlaubt.
+     */
     @PostMapping("/assignment")
     public String create(
             @RequestParam("patientId") String patientId,
@@ -97,6 +109,10 @@ public class AssignmentController {
         return "redirect:/assignment?patientId=" + patientId;
     }
 
+    /**
+     * Beendet eine bestehende Zuweisung.
+     * Nur für STAFF/ADMIN erlaubt.
+     */
     @PostMapping("/assignment/{id}/end")
     public String end(
             @PathVariable("id") String assignmentId,
@@ -120,6 +136,7 @@ public class AssignmentController {
             ra.addFlashAttribute("error", ex.getMessage());
         }
 
+        // Rücksprung mit aktivem Patientenkontext
         String redirectPatientId = firstNonBlank(patientId, (String) session.getAttribute(SessionKeys.ACTIVE_PATIENT_ID));
         if (redirectPatientId == null || redirectPatientId.isBlank()) {
             return "redirect:/assignment";
@@ -127,12 +144,19 @@ public class AssignmentController {
         return "redirect:/assignment?patientId=" + redirectPatientId;
     }
 
+    /**
+     * Liefert den aktuell eingeloggten User aus der Session.
+     */
     private UserSession currentUser(HttpSession session) {
         if (session == null) return null;
         Object v = session.getAttribute(SessionKeys.LOGGED_IN_USER);
         return (v instanceof UserSession u) ? u : null;
     }
 
+    /**
+     * Lädt Patienten für Dropdown (STAFF/ADMIN).
+     * Fallback-Logik für Anzeige-Label.
+     */
     private List<PatientOption> loadPatientsIfPossible() {
         if (jdbcTemplate == null) return Collections.emptyList();
 
@@ -154,6 +178,9 @@ public class AssignmentController {
         }
     }
 
+    /**
+     * Lädt medizinisches Personal für Dropdown.
+     */
     private List<StaffOption> loadStaffIfPossible() {
         if (jdbcTemplate == null) return Collections.emptyList();
 
@@ -180,6 +207,9 @@ public class AssignmentController {
         }
     }
 
+    /**
+     * Hilfsfunktion: erste nicht-leere Zeichenkette zurückgeben.
+     */
     private String firstNonBlank(String a, String b) {
         if (a != null && !a.isBlank()) return a;
         if (b != null && !b.isBlank()) return b;
