@@ -354,12 +354,12 @@
             <div class="mt-panel-subtitle">
                 <ul class="mb-0">
                     <li><strong>Auth &amp; Rollen:</strong> Session-Login, BCrypt; Rollen: PATIENT, STAFF, ADMIN</li>
-                    <li><strong>BCs aktiv:</strong> user, vitals, medication, alerts (Alerts/Events basieren auf vitals)</li>
-                    <li><strong>BCs geplant:</strong> coredata, assignment, history (derzeit Skeleton)</li>
-                    <li><strong>UI/Navigation:</strong> Menü-/Header-Struktur ist noch nicht einheitlich (Vereinheitlichung der Templates folgt)</li>
+                    <li><strong>BCs aktiv:</strong> user, vitals, medication, alerts (Alerts/Events basieren auf vitals), assignment</li>
+                    <li><strong>BCs geplant:</strong> coredata, history (derzeit Skeleton)</li>
+                    <li><strong>UI/Navigation:</strong> Menü-/Header-/UI-Struktur ist noch nicht einheitlich (Templates sollen identisch wirken und alles an der gleichen Stelle sein)</li>
                     <li><strong>Datenbank:</strong> MySQL im Betrieb; Tests mit H2 (In-Memory). Schema/Seed erfolgt per eigenem Bootstrap (kein Hibernate <code>ddl-auto</code>). Umstellung auf <strong>InnoDB</strong> steht noch aus.</li>
                     <li><strong>Build &amp; Tests:</strong> JUnit 5 / Spring Boot Test; GitHub Actions: <code>mvn clean test</code></li>
-                    <li><strong>Nächster BC:</strong> <strong>assignment</strong></li>
+                    <li><strong>Nächster BC:</strong> <strong>coredata</strong></li>
                 </ul>
             </div>
         </aside>
