@@ -2,7 +2,7 @@
 <html lang="de" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Vitalwerte – MediTrack</title>
+    <title>Zuweisungen – MediTrack</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,13 +12,15 @@
             --mt-bg-shell: #f5fbfd;
             --mt-bg-header: #002B39;
             --mt-accent: #11BFD1;
+            --mt-bg-dark: #002B39;
             --mt-text-main: #012733;
             --mt-text-muted: #6b7b86;
-            --mt-bg-dark: #002B39;
             --mt-radius-lg: 18px;
             --mt-shadow-soft: 0 18px 45px rgba(0,0,0,0.12);
         }
+
         * { box-sizing: border-box; }
+
         body {
             margin: 0;
             min-height: 100vh;
@@ -61,7 +63,11 @@
             justify-content:center;
         }
 
-        .mt-brand-logo { width: 26px; height: 26px; display:block; }
+        .mt-brand-logo {
+            width: 26px;
+            height: 26px;
+            display:block;
+        }
 
         .mt-logout-btn {
             border: 1px solid rgba(255,255,255,.35);
@@ -71,6 +77,7 @@
             padding: .55rem .9rem;
             font-weight: 700;
         }
+
         .mt-logout-btn:hover { background: rgba(255,255,255,.08); }
 
         .mt-main {
@@ -88,14 +95,32 @@
 
         .mt-muted { color: var(--mt-text-muted); }
 
-        .mt-btn-accent { background: var(--mt-accent); border: 0; color: var(--mt-bg-header); font-weight: 700; border-radius: 10px; padding: .55rem .9rem; }
+        .mt-btn-accent {
+            background: var(--mt-accent);
+            border: 0;
+            color: var(--mt-bg-header);
+            font-weight: 800;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+        }
         .mt-btn-accent:hover { filter: brightness(.95); }
-        .mt-btn-ghost { border: 1px solid rgba(0,0,0,.12); background: white; border-radius: 10px; padding: .55rem .9rem; font-weight: 700; color: var(--mt-bg-header); }
+
+        .mt-btn-ghost {
+            border: 1px solid rgba(0,0,0,.12);
+            background: white;
+            border-radius: 10px;
+            padding: .55rem .9rem;
+            font-weight: 800;
+            color: var(--mt-bg-header);
+        }
         .mt-btn-ghost:hover { background: rgba(0,0,0,.04); }
 
-        .mt-accent { color: var(--mt-accent); font-weight: 700; }
-
-        footer { text-align:center; font-size:.85rem; color: rgba(255, 255, 255, 0.9); padding: 1.2rem 0 1.6rem; }
+        footer {
+            text-align:center;
+            font-size:.85rem;
+            color: rgba(255, 255, 255, 0.9);
+            padding: 1.2rem 0 1.6rem;
+        }
     </style>
 </head>
 <body>
@@ -124,50 +149,30 @@
     <section class="mt-panel">
 
         <!-- Flash messages -->
-        <div class="alert alert-success" th:if="${success}" th:text="${success}">Gespeichert</div>
+        <div class="alert alert-success" th:if="${success}" th:text="${success}">OK</div>
         <div class="alert alert-danger" th:if="${error}" th:text="${error}">Fehler</div>
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
-                <h2 class="mb-1">Vitalwerte</h2>
-
+                <div class="h4 mb-1" style="font-weight: 900; color: var(--mt-bg-header);">Zuweisungen</div>
                 <div class="mt-muted">
                     Patient:
-                    <span class="mt-accent"
-                          th:text="${patientLabel != null && !#strings.isEmpty(patientLabel) ? patientLabel : patientId}">PatientName</span>
-                    <span class="mt-muted" th:if="${patientId != null && !#strings.isEmpty(patientId)}">
-                        (ID: <span th:text="${patientId}">patient-123</span>)
-                    </span>
-                </div>
-
-                <div class="alert alert-info mb-0" role="alert"
-                     th:if="${canSelectPatient and (patientId == null or #strings.isEmpty(patientId))}">
-                    Bitte wähle zuerst einen Patienten, damit Vitalwerte angezeigt werden können.
+                    <strong th:text="${patientId != null ? patientId : '—'}">patient-123</strong>
                 </div>
             </div>
-
             <div class="d-flex flex-wrap gap-2 align-items-center">
                 <a class="mt-btn-ghost text-decoration-none" th:href="@{/home}">Zurück</a>
-
-                <a class="mt-btn-accent text-decoration-none"
-                   th:if="${(patientId != null and !#strings.isEmpty(patientId))}"
-                   th:href="@{/vitals/readings/new(patientId=${patientId})}">
-                    + Neue Messung
-                </a>
-                <button class="mt-btn-accent" type="button" disabled
-                        th:if="${patientId == null or #strings.isEmpty(patientId)}">
-                    + Neue Messung
-                </button>
             </div>
         </div>
 
         <!-- STAFF/ADMIN: Patient-Auswahl -->
         <form class="row g-2 align-items-end mb-3" method="get"
-              th:if="${canSelectPatient}" th:action="@{/vitals/readings}">
+              th:if="${canManageAssignments}" th:action="@{/assignment}">
             <div class="col-12 col-md-8">
                 <label class="form-label" for="patientSelect">Patient auswählen</label>
-                <select id="patientSelect" class="form-select" name="patientId">
-                    <option value="" th:selected="${patientId == null or #strings.isEmpty(patientId)}" disabled>Bitte auswählen…</option>
+                <select id="patientSelect" class="form-select" name="patientId" required>
+                    <option value="" disabled
+                            th:selected="${patientId == null or #strings.isEmpty(patientId)}">Bitte auswählen…</option>
                     <option th:each="p : ${patients}"
                             th:value="${p.id}"
                             th:text="${p.label}"
@@ -179,40 +184,77 @@
             </div>
         </form>
 
-        <div class="d-flex gap-2 mb-3"
-             th:if="${patientId != null and !#strings.isEmpty(patientId)}">
-            <a class="mt-btn-ghost text-decoration-none" th:href="@{/alerts}">Zu Alerts</a>
+        <!-- STAFF/ADMIN: Create Assignment -->
+        <div class="border rounded p-3 mb-4" th:if="${canManageAssignments}">
+            <div class="h6 mb-2" style="font-weight: 900; color: var(--mt-bg-header);">Neuen Staff zuweisen</div>
+            <form class="row g-2" method="post" th:action="@{/assignment}">
+                <input type="hidden" name="patientId" th:value="${patientId}">
+
+                <div class="col-12 col-md-5">
+                    <label class="form-label" for="staffSelect">Staff</label>
+                    <select id="staffSelect" class="form-select" name="staffId" required>
+                        <option value="" disabled selected>Bitte auswählen…</option>
+                        <option th:each="s : ${staff}" th:value="${s.id}" th:text="${s.label}"></option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="roleSelect">Rolle</label>
+                    <select id="roleSelect" class="form-select" name="role">
+                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r}"></option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3 d-grid align-items-end">
+                    <button type="submit" class="mt-btn-accent" th:disabled="${patientId == null or #strings.isEmpty(patientId)}">
+                        + Zuweisen
+                    </button>
+                </div>
+            </form>
+
+            <div class="alert alert-info mt-3 mb-0" role="alert"
+                 th:if="${patientId == null or #strings.isEmpty(patientId)}">
+                Bitte wähle zuerst einen Patienten.
+            </div>
         </div>
 
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead>
                 <tr>
-                    <th>Zeitpunkt</th>
-                    <th>Typ</th>
-                    <th>Wert</th>
+                    <th>Staff-ID</th>
+                    <th>Rolle</th>
+                    <th>Zugewiesen am</th>
+                    <th style="width: 1%;"></th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:if="${#lists.isEmpty(readings)}">
-                    <td colspan="3" class="mt-muted">Noch keine Vitalwerte vorhanden.</td>
+                <tr th:if="${#lists.isEmpty(assignments)}">
+                    <td colspan="4" class="mt-muted">Noch keine aktiven Zuweisungen.</td>
                 </tr>
 
-                <tr th:each="r : ${readings}">
-                    <td class="mt-muted" th:text="${r.measuredAt}">2026-01-09T21:00</td>
-                    <td th:text="${r.type}">PULSE</td>
-                    <td>
-                        <strong th:text="${r.value}">70</strong>
-                        <span class="mt-muted" th:text="${r.unit}">BPM</span>
+                <tr th:each="a : ${assignments}">
+                    <td th:text="${a.staffId}">staff-123</td>
+                    <td th:text="${a.role}">SUPPORT</td>
+                    <td class="mt-muted" th:text="${a.assignedAt}">2026-01-10T22:00</td>
+                    <td class="text-end" th:if="${canManageAssignments}">
+                        <form method="post" th:action="@{/assignment/{id}/end(id=${a.id})}" style="margin:0;">
+                            <input type="hidden" name="patientId" th:value="${patientId}">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Beenden</button>
+                        </form>
                     </td>
+                    <td th:if="${!canManageAssignments}"></td>
                 </tr>
                 </tbody>
             </table>
         </div>
-    </section>
 
-    <footer>© MediTrack</footer>
+    </section>
 </main>
+
+<footer>
+    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> MediTrack
+</footer>
 
 </body>
 </html>
