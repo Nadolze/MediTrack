@@ -35,6 +35,9 @@
 
         .navbar.mt-navbar {
             background-color: var(--mt-bg-dark);
+
+            /* NEU: kleiner abgrenzender Border in Akzent-Farbe */
+            border-bottom: 2px solid var(--mt-accent);
         }
 
         .navbar.mt-navbar .navbar-brand {
@@ -139,11 +142,15 @@
             font-size: .9rem;
         }
 
+        /* Footer dunkel + weiß */
         .footer {
+            margin-top: 48px;
             padding: 16px 0 24px;
             font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.9);
             text-align: center;
+            background: var(--mt-bg-dark);
+            color: rgba(255, 255, 255, 0.9);
+            border-top: 1px solid rgba(255,255,255,0.12);
         }
     </style>
 </head>
@@ -223,11 +230,11 @@
                         </p>
                     </form>
                 </div>
-
-                <div class="footer mt-3">
-                    &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2026</span> MediTrack
-                </div>
             </div>
+
+        </div>
+        <div class="footer">
+            &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2026</span> MediTrack
         </div>
     </div>
 </main>
