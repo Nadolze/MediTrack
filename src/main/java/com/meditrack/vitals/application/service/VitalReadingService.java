@@ -25,7 +25,10 @@ import java.util.Objects;
 @Service
 public class VitalReadingService {
 
+    // Repository für Persistenz von VitalReading-Aggregaten
     private final VitalReadingRepository repository;
+
+    // Spring Event Publisher für Domain Events
     private final ApplicationEventPublisher eventPublisher;
 
     public VitalReadingService(VitalReadingRepository repository, ApplicationEventPublisher eventPublisher) {
@@ -33,6 +36,10 @@ public class VitalReadingService {
         this.eventPublisher = eventPublisher;
     }
 
+    /**
+     * Liefert eine Liste von Vitalwerten für einen Patienten.
+     *
+     */
     public List<VitalReadingSummaryDto> listForPatient(String patientId) {
         if (patientId == null || patientId.isBlank()) {
             return List.of();
@@ -50,10 +57,16 @@ public class VitalReadingService {
                 .toList();
     }
 
+
+    /**
+     * Erstellt einen neuen Vitalwert.
+     *
+     */
     @Transactional
     public VitalReadingId create(CreateVitalReadingCommand command, String recordedByStaffId) {
         Objects.requireNonNull(command, "command darf nicht null sein.");
 
+        // Pflichtfelder validieren und aufbereiten
         String patientId = requireText(command.getPatientId(), "patientId");
         VitalType type = Objects.requireNonNull(command.getType(), "type darf nicht null sein.");
         Double value = Objects.requireNonNull(command.getValue(), "value darf nicht null sein.");
@@ -61,6 +74,7 @@ public class VitalReadingService {
 
         LocalDateTime measuredAt = (command.getMeasuredAt() == null) ? LocalDateTime.now() : command.getMeasuredAt();
 
+        // Erzeugen des Domain-Aggregats
         VitalReading reading = VitalReading.create(
                 new PatientId(patientId),
                 type,
@@ -83,6 +97,7 @@ public class VitalReadingService {
         return reading.getVitalReadingId();
     }
 
+    // Hilfsmethode zur Validierung von Textfeldern.
     private String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " darf nicht leer sein.");

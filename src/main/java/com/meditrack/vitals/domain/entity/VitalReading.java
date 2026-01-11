@@ -51,6 +51,10 @@ public class VitalReading {
         // JPA
     }
 
+    /**
+     * Privater Konstruktor zur Sicherstellung,
+     * dass Invarianten nur an einer Stelle geprüft werden.
+     */
     private VitalReading(String id,
                          String patientId,
                          VitalType type,
@@ -58,7 +62,7 @@ public class VitalReading {
                          Unit unit,
                          LocalDateTime measuredAt,
                          String recordedByStaffId) {
-
+        // Pflichtfelder validieren
         this.id = Objects.requireNonNull(id, "id darf nicht null sein.");
         this.patientId = new PatientId(patientId).value();
         this.type = Objects.requireNonNull(type, "type darf nicht null sein.");
@@ -68,6 +72,7 @@ public class VitalReading {
         this.recordedByStaffId = (recordedByStaffId == null || recordedByStaffId.isBlank()) ? null : recordedByStaffId;
     }
 
+    // Methode zur Erstellung eines neuen VitalReadings.
     public static VitalReading create(PatientId patientId,
                                       VitalType type,
                                       MeasurementValue value,
