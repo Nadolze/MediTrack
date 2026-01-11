@@ -8,6 +8,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit-Tests für Threshold.
+ *
+ * Ziel:
+ * - Überprüfen der min/max-Logik.
+ * - isBelow/isAbove sollen korrekt arbeiten, auch bei null-Grenzen.
+ * - minInclusive darf nicht größer als maxInclusive sein.
  */
 class ThresholdTest {
 
