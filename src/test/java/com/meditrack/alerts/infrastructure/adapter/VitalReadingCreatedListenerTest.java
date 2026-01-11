@@ -11,6 +11,15 @@ import java.util.Arrays;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+/**
+ * Minimaler Robustheits-Test für den VitalReadingCreatedListener.
+ *
+ * Ziel:
+ * - Sicherstellen, dass ein Event-Handler existiert
+ * - Verifizieren, dass der Listener beim Handling eines Events
+ *   mindestens eine seiner Dependencies benutzt
+ *
+ */
 class VitalReadingCreatedListenerTest {
 
     @Test

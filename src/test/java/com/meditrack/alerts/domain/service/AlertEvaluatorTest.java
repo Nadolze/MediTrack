@@ -8,6 +8,14 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Unit-Tests für den AlertEvaluator.
+ *
+ * Ziel:
+ * - Validierung der fachlichen Bewertungslogik für Vitalwerte
+ * - Sicherstellen der korrekten Severity-Einstufung anhand von Grenzwerten
+ *
+ */
 class AlertEvaluatorTest {
 
     @Test

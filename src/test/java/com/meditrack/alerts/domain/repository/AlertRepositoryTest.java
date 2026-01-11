@@ -15,7 +15,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * JPA-Integrationstest für das AlertRepository.
+ *
+ * Ziel:
+ * - Verifikation von abgeleiteten Query-Methoden (Spring Data)
+ * - Sicherstellen der korrekten Persistenz und Abfrage von Alerts
+ *
+ */
 @DataJpaTest
 @ActiveProfiles("test")
 class AlertRepositoryTest {
