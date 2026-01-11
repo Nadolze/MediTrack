@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="de" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -109,13 +108,11 @@
         MediTrack
     </a>
 
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-        <a class="btn btn-outline-light btn-sm" th:href="@{/alerts}">Alerts</a>
-        <a class="btn btn-outline-light btn-sm" th:href="@{/medication/plans}">Medikation</a>
-
-        <span class="small ms-1">Angemeldet als
-            <strong th:text="${user != null ? user.username : 'user'}">user</strong>
-        </span>
+    <div class="mt-topbar-right d-flex align-items-center gap-2 flex-wrap">
+        <a class="btn btn-sm btn-outline-light" th:href="@{/vitals/readings}">Vitalwerte</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/medication/plans}">Medikation</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/alerts}">Alerts</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/assignment}">Zuweisungen</a>
 
         <form th:action="@{/logout}" method="post" style="margin:0;">
             <button type="submit" class="mt-logout-btn">Abmelden</button>

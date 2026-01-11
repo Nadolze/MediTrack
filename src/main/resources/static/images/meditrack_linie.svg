@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="200" viewBox="0 0 1200 200" preserveAspectRatio="none">
+  <defs>
+    <!-- Soft glow similar to the logo -->
+    <filter id="glow" x="-20%" y="-50%" width="140%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="0 0 0 0 0.05
+                0 0 0 0 0.95
+                0 0 0 0 0.98
+                0 0 0 0.9 0" result="glowColor"/>
+      <feMerge>
+        <feMergeNode in="glowColor"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="strokeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0DF2FD"/>
+      <stop offset="100%" stop-color="#0CCEDE"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Baseline y = 100; path starts/ends at same height and flat, so it tiles seamlessly in X -->
+  <path filter="url(#glow)"
+        d="
+          M 0 100
+          L 120 100
+
+          C 170 100, 190 100, 210 100
+          L 240 100
+
+          C 255 100, 265 92, 275 70
+          C 285 50, 295 45, 305 70
+          C 315 95, 330 100, 350 100
+
+          L 395 100
+
+          C 410 100, 420 105, 430 120
+          C 445 150, 455 160, 470 120
+          C 480 93, 500 100, 515 100
+
+          L 560 100
+
+          C 575 100, 585 70, 600 40
+          C 610 20, 625 20, 635 40
+          C 650 70, 660 110, 680 110
+          C 700 110, 705 80, 715 60
+          C 730 30, 745 30, 760 60
+          C 770 80, 780 100, 800 100
+
+          L 860 100
+
+          C 875 100, 885 92, 895 78
+          C 910 55, 930 55, 945 78
+          C 955 92, 965 100, 980 100
+
+          L 1080 100
+          L 1200 100
+        "
+        fill="none"
+        stroke="url(#strokeGrad)"
+        stroke-width="8"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

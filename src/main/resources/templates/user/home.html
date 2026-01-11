@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="de" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -173,10 +172,12 @@
         MediTrack
     </a>
 
-    <div class="mt-topbar-right d-flex align-items-center gap-2">
+    <div class="mt-topbar-right d-flex align-items-center gap-2 flex-wrap">
         <a class="btn btn-sm btn-outline-light" th:href="@{/vitals/readings}">Vitalwerte</a>
         <a class="btn btn-sm btn-outline-light" th:href="@{/medication/plans}">Medikation</a>
         <a class="btn btn-sm btn-outline-light" th:href="@{/alerts}">Alerts</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/assignment}">Zuweisungen</a>
+
         <form th:action="@{/logout}" method="post" style="margin:0;">
             <button type="submit" class="mt-logout-btn">Abmelden</button>
         </form>
@@ -198,7 +199,7 @@
             </div>
 
             <p class="mt-panel-subtitle mb-3">
-                Hier bauen wir nach und nach die BC-Features auf. Als Nächstes: <strong>Medication</strong> UI-Flow.
+                Hier bauen wir nach und nach die BC-Features auf. Als Nächstes: <strong>Assignment</strong> (Zuweisungen).
             </p>
 
             <!-- Medication Quick Jump -->
@@ -303,6 +304,43 @@
                     <a class="mt-btn-accent text-decoration-none w-100" th:href="@{/alerts}">Meine Alerts</a>
                 </div>
             </div>
+
+            <!-- Assignment Quick Jump -->
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div class="mt-panel-title">Zuweisungen</div>
+                    <div class="mt-panel-subtitle" th:if="${canCreatePlan}">
+                        Patient auswählen und Zuweisungen verwalten (Staff zuweisen / beenden).
+                    </div>
+                    <div class="mt-panel-subtitle" th:if="${!canCreatePlan}">
+                        Deine aktuellen Zuweisungen (zugewiesenes Personal).
+                    </div>
+                </div>
+            </div>
+
+            <!-- STAFF/ADMIN: Patient-Auswahl + Aktion -->
+            <div th:if="${canCreatePlan}">
+                <form class="row g-2 mt-2" method="get" th:action="@{/assignment}">
+                    <div class="col-md-7">
+                        <select class="form-select" name="patientId" required>
+                            <option value="" disabled selected>Patient auswählen…</option>
+                            <option th:each="p : ${patients}" th:value="${p.id}" th:text="${p.label}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-5 d-flex gap-2">
+                        <button class="mt-btn-accent w-100" type="submit">Zuweisungen öffnen</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- PATIENT: eigene Zuweisungen -->
+            <div th:if="${!canCreatePlan}" class="mt-2">
+                <div class="d-flex gap-2 mt-2">
+                    <a class="mt-btn-accent text-decoration-none w-100" th:href="@{/assignment}">Meine Zuweisungen</a>
+                </div>
+            </div>
         </section>
 
         <aside class="mt-panel">
@@ -316,14 +354,13 @@
             <div class="mt-panel-subtitle">
                 <ul class="mb-0">
                     <li><strong>Auth &amp; Rollen:</strong> Session-Login, BCrypt; Rollen: PATIENT, STAFF, ADMIN</li>
-                    <li><strong>BCs aktiv:</strong> user, vitals, medication, alerts (Alerts/Events basieren auf vitals)</li>
-                    <li><strong>BCs geplant:</strong> coredata, assignment, history (derzeit Skeleton)</li>
-                    <li><strong>UI/Navigation:</strong> Menü-/Header-Struktur ist noch nicht einheitlich (Vereinheitlichung der Templates folgt)</li>
+                    <li><strong>BCs aktiv:</strong> user, vitals, medication, alerts (Alerts/Events basieren auf vitals), assignment</li>
+                    <li><strong>BCs geplant:</strong> coredata, history (derzeit Skeleton)</li>
+                    <li><strong>UI/Navigation:</strong> Menü-/Header-/UI-Struktur ist noch nicht einheitlich (Templates sollen identisch wirken und alles an der gleichen Stelle sein)</li>
                     <li><strong>Datenbank:</strong> MySQL im Betrieb; Tests mit H2 (In-Memory). Schema/Seed erfolgt per eigenem Bootstrap (kein Hibernate <code>ddl-auto</code>). Umstellung auf <strong>InnoDB</strong> steht noch aus.</li>
                     <li><strong>Build &amp; Tests:</strong> JUnit 5 / Spring Boot Test; GitHub Actions: <code>mvn clean test</code></li>
-                    <li><strong>Nächster BC:</strong> <strong>assignment</strong></li>
+                    <li><strong>Nächster BC:</strong> <strong>coredata</strong></li>
                 </ul>
-
             </div>
         </aside>
     </div>

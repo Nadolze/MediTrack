@@ -1,10 +1,14 @@
--- Reset-Skript fuer H2 ("DROP"-Modus): Daten loeschen ohne die Tabellen zu entfernen.
--- Hintergrund: Ein echtes DROP wuerde die Applikation danach nicht mehr funktionieren lassen.
+-- Legacy: Full reset by drop+recreate is now handled by DatabaseCreateTables.
+-- Kept for manual use.
 
-SET REFERENTIAL_INTEGRITY FALSE;
+DROP TABLE IF EXISTS mt_alert;
+DROP TABLE IF EXISTS mt_vital_reading;
 
-DELETE FROM mt_medical_staff;
-DELETE FROM mt_patient;
-DELETE FROM mt_user;
+DROP TABLE IF EXISTS mt_medication_plan_item;
+DROP TABLE IF EXISTS mt_medication_plan;
+DROP TABLE IF EXISTS mt_medication;
 
-SET REFERENTIAL_INTEGRITY TRUE;
+DROP TABLE IF EXISTS mt_assignment;
+DROP TABLE IF EXISTS mt_medical_staff;
+DROP TABLE IF EXISTS mt_patient;
+DROP TABLE IF EXISTS mt_user;

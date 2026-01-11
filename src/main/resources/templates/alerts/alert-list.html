@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="de" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -119,9 +118,11 @@
         MediTrack
     </a>
 
-    <div class="d-flex align-items-center gap-2">
+    <div class="mt-topbar-right d-flex align-items-center gap-2 flex-wrap">
         <a class="btn btn-sm btn-outline-light" th:href="@{/vitals/readings}">Vitalwerte</a>
         <a class="btn btn-sm btn-outline-light" th:href="@{/medication/plans}">Medikation</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/alerts}">Alerts</a>
+        <a class="btn btn-sm btn-outline-light" th:href="@{/assignment}">Zuweisungen</a>
 
         <form th:action="@{/logout}" method="post" style="margin:0;">
             <button type="submit" class="mt-logout-btn">Abmelden</button>
@@ -215,13 +216,10 @@
                 </table>
             </div>
         </div>
-
-
-
     </section>
-    <!-- NEU: Footer ist jetzt dunkel + weißer Text -->
+
     <div class="footer mt-4">
-        &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2026</span> MediTrack
+        &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> MediTrack
     </div>
 </main>
 

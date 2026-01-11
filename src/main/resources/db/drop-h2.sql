@@ -1,11 +1,13 @@
--- Drop-Skript fuer H2 (In-Memory / lokale Entwicklung)
--- Wird von DatabaseCreateTables bei `meditrack.db.init.drop-and-recreate=true` ausgefuehrt.
+-- Drop all MediTrack tables (H2)
 
+DROP TABLE IF EXISTS mt_alert;
+DROP TABLE IF EXISTS mt_vital_reading;
+
+DROP TABLE IF EXISTS mt_medication_plan_item;
+DROP TABLE IF EXISTS mt_medication_plan;
+DROP TABLE IF EXISTS mt_medication;
+
+DROP TABLE IF EXISTS mt_assignment;
 DROP TABLE IF EXISTS mt_medical_staff;
 DROP TABLE IF EXISTS mt_patient;
 DROP TABLE IF EXISTS mt_user;
-
--- Optional: explizit Indizes loeschen (H2 entfernt diese i.d.R. mit der Tabelle)
-DROP INDEX IF EXISTS uk_mt_staff_user;
-DROP INDEX IF EXISTS uk_mt_patient_user;
-DROP INDEX IF EXISTS uk_mt_user_email;
