@@ -13,7 +13,16 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-
+/**
+ * Smoke-Test für die Datenbank-Initialisierung.
+ *
+ * Ziel:
+ * - sicherstellen, dass die Schema-Erstellung auf einer In-Memory-H2-Datenbank
+ *   ohne Exceptions durchläuft
+ * - prüfen, dass die DDL-Skripte korrekt sind und mindestens eine zentrale Tabelle
+ *   (z.B. mt_user) erfolgreich angelegt wird
+ * - Absicherung gegen kaputte SQL-Skripte oder fehlerhafte Init-Logik
+ */
 class DatabaseCreateTablesTest {
 
     private EmbeddedDatabase db;

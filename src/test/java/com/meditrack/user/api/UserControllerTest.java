@@ -18,7 +18,15 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+/**
+ * Unit-/WebMvc-Tests für den UserController.
+ *
+ * Ziel:
+ * - Prüfen, dass GET /login das Login-Formular liefert
+ * - Prüfen, dass POST /login bei gültigen Credentials die Session setzt und auf /home redirectet
+ * - Prüfen, dass POST /login bei falschen Credentials die Login-View mit Fehler zeigt
+ * - Prüfen, dass POST /logout die Session invalidiert und zur Landing-Page redirectet
+ */
 @WebMvcTest(UserController.class)
 class UserControllerTest {
 

@@ -18,7 +18,17 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import org.springframework.test.web.servlet.MockMvc;
-
+/**
+ * Integrations-Test für den LoginAliasController.
+ *
+ * Ziel:
+ * - Sicherstellen, dass der Controller mindestens ein öffentliches GET-Endpoint besitzt
+ * - Endpoint muss ohne Path-Variablen erreichbar sein
+ * - Aufruf liefert entweder:
+ *   - 2xx (direkte Seite) oder
+ *   - 3xx (Redirect, z.B. auf Login)
+ *
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 class LoginAliasControllerTest {

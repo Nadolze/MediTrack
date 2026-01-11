@@ -16,6 +16,16 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integrations-Test zwischen Vitals-BC und Alerts-BC.
+ *
+ * Ziel:
+ * - Verifizieren, dass beim Anlegen eines VitalReadings
+ *   automatisch Alerts erzeugt werden (Event → AlertService)
+ * - Sicherstellen, dass nur grenzwertige/kritische Messungen
+ *   zu Alerts führen
+ *
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class VitalsToAlertsIntegrationTest {

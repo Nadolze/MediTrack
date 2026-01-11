@@ -13,6 +13,14 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integrationstest für das AssignmentRepository (JPA).
+ *
+ * Ziel:
+ * - Verifikation der Repository-Query
+ *   findByPatientIdAndStatusOrderByAssignedAtDesc(...)
+ *
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional

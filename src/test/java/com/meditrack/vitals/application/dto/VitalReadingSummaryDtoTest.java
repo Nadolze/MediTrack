@@ -7,7 +7,15 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * Unit-Tests für VitalReadingSummaryDto.
+ *
+ * Ziel:
+ * - Prüfen, dass alle Getter/Accessoren korrekt Werte liefern
+ * - equals und hashCode funktionieren konsistent bei gleichen Werten
+ * - equals liefert false, wenn irgendein Feld unterschiedlich ist
+ * - toString enthält relevante Felder und Klassennamen
+ */
 class VitalReadingSummaryDtoTest {
 
     @Test

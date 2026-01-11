@@ -18,6 +18,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+/**
+ * Web-/Architekturtest für den AlertsPageController.
+ *
+ * Ziel:
+ * - Sicherstellen, dass der Controller mindestens einen GET-Endpunkt besitzt
+ * - Absicherung des Zugriffsverhaltens ohne Authentifizierung
+ *
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 class AlertsPageControllerTest {

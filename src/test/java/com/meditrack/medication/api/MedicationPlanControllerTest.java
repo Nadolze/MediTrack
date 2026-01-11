@@ -20,7 +20,14 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+/**
+ * Web-MVC-Tests für den MedicationPlanController.
+ *
+ * Ziel:
+ * - Absicherung der Controller-Logik (Routing, Views, HTTP-Status)
+ * - Prüfung der Zugriffskontrolle über UserSession
+ *
+ */
 @WebMvcTest(MedicationPlanController.class)
 class MedicationPlanControllerTest {
 

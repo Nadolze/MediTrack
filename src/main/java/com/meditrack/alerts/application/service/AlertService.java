@@ -14,12 +14,24 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-
+/**
+ * Application Service für den Alert-BC.
+ *
+ * Verantwortlich für:
+ * - Erzeugen von Alerts als Reaktion auf VitalReadingCreatedEvents
+ * - Lesen von Alerts (Read-Model)
+ * - Durchführen erlaubter Status-Übergänge (acknowledge / resolve)
+ *
+ */
 @Service
 public class AlertService {
 
+    // Zugriff auf Alert-Aggregates
     private final AlertRepository alertRepository;
+
+    // Domänenlogik zur Bewertung von Vitalwerten
     private final AlertEvaluator evaluator;
+
     private final Clock clock;
 
     public AlertService(AlertRepository alertRepository, AlertEvaluator evaluator, Clock clock) {
@@ -28,6 +40,14 @@ public class AlertService {
         this.clock = clock;
     }
 
+    /**
+     * Reagiert auf ein VitalReadingCreatedEvent.
+     *
+     * Ablauf:
+     * 1) Idempotenz-Check (kein doppelter Alert pro VitalReading)
+     * 2) Bewertung des Vitalwerts über AlertEvaluator
+     * 3) Erzeugen und Persistieren eines Alerts bei Grenzwertverletzung
+     */
     public void handle(VitalReadingCreatedEvent event) {
         // Doppelte Alerts verhindern (z.B. bei erneutem Event)
         if (alertRepository.existsByVitalReadingId(event.vitalReadingId())) {
@@ -43,6 +63,7 @@ public class AlertService {
 
         AlertEvaluator.EvaluationResult result = evaluation.get();
 
+        // Erzeugung des Alert-Aggregates
         // ✅ WICHTIG: Reihenfolge gemäß Alert.trigger(Signatur)
         Alert alert = Alert.trigger(
                 AlertId.newId(),
@@ -56,6 +77,9 @@ public class AlertService {
         alertRepository.save(alert);
     }
 
+    /**
+     * Liefert alle Alerts eines Patienten als Read-Model.
+     */
     public List<AlertSummaryDto> listForPatient(String patientId) {
         return alertRepository.findByPatientId(patientId)
                 .stream()
@@ -63,6 +87,10 @@ public class AlertService {
                 .toList();
     }
 
+    /**
+     * Bestätigt einen Alert (Status: ACKNOWLEDGED).
+     * Mehrfaches Aufrufen ist idempotent, abhängig von der Entity-Logik.
+     */
     public void acknowledge(String alertId) {
         alertRepository.findById(alertId).ifPresent(alert -> {
             // je nach Entity: acknowledge() oder acknowledge(now)
@@ -72,6 +100,10 @@ public class AlertService {
         });
     }
 
+    /**
+     * Löst einen Alert final auf (Status: RESOLVED).
+     * Setzt zusätzlich den Resolve-Zeitpunkt.
+     */
     public void resolve(String alertId) {
         alertRepository.findById(alertId).ifPresent(alert -> {
             alert.resolve(LocalDateTime.now(clock));

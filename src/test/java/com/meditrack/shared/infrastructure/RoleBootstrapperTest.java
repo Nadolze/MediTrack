@@ -10,7 +10,16 @@ import java.util.Optional;
 import static org.mockito.Mockito.*;
 
 class RoleBootstrapperTest {
-
+    /**
+     * Smoke- und Verhaltens-Test für den RoleBootstrapper.
+     *
+     * Ziel:
+     * - sicherstellen, dass beim Vorhandensein der Bootstrap-Property
+     *   der entsprechende Benutzer gefunden und seine Rolle angepasst wird
+     * - verifizieren, dass ohne relevante Properties keinerlei Repository-
+     *   Interaktion stattfindet
+     * - Absicherung der Startlogik gegen unbeabsichtigte Seiteneffekte
+     */
     @Test
     void shouldSetAdminRoleWhenPropertyPresent() {
         JpaUserRepository repo = mock(JpaUserRepository.class);

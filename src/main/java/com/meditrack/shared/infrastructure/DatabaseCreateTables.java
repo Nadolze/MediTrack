@@ -18,10 +18,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+/**
+ * Infrastruktur-Klasse zur Initialisierung der Datenbank.
+ */
 public class DatabaseCreateTables {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseCreateTables.class);
 
+    // Zentrale Infrastruktur-Abhängigkeiten
     private final DataSource dataSource;
     private final Environment env;
     private final PasswordEncoder passwordEncoder;
@@ -32,17 +36,24 @@ public class DatabaseCreateTables {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Einstiegspunkt für DB-Initialisierung.
+     * Steuert Schema, Reset und Seed anhand von Properties.
+     */
     public void run() {
+        // Globale Aktivierung / Deaktivierung
         boolean initEnabled = bool("meditrack.db.init.enabled", true);
         if (!initEnabled) {
             log.info("🧱 DB-Init ist deaktiviert (meditrack.db.init.enabled=false).");
             return;
         }
 
+        // DB-Typ erkennen
         String url = jdbcUrl();
         boolean isH2 = url.toLowerCase(Locale.ROOT).startsWith("jdbc:h2:");
         boolean isMySql = url.toLowerCase(Locale.ROOT).startsWith("jdbc:mysql:");
 
+        // Steuerflags
         boolean dropAndRecreate = bool("meditrack.db.init.drop-and-recreate", false);
         boolean reset = bool("meditrack.db.init.reset", false);
 
@@ -55,18 +66,22 @@ public class DatabaseCreateTables {
 
         try {
             if (dropAndRecreate) {
+                // komplettes Neuaufsetzen
                 log.warn("🧨 DROP+RECREATE aktiv – Tabellen werden neu erstellt.");
                 executeScript(isH2 ? "db/drop-h2.sql" : "db/drop-mysql.sql");
             }
 
+            // Schema-Erstellung
             log.info("🧱 Schema init: {}", isH2 ? "H2" : (isMySql ? "MySQL" : "UNKNOWN"));
             executeScript(isH2 ? "db/schema-h2.sql" : "db/schema-mysql.sql");
 
+            // Tabellen leeren
             if (reset) {
                 log.warn("🧨 DEV-RESET aktiv – Tabellen werden geleert.");
                 resetAllTables(isH2);
             }
 
+            // Beispiel-Daten anlegen
             boolean seedEnabled = bool("meditrack.db.seed.enabled", false) || env.getProperty("MEDITRACK_SEED_PASSWORD") != null;
             if (seedEnabled) {
                 seedUsersAndStaff();
@@ -80,6 +95,9 @@ public class DatabaseCreateTables {
         }
     }
 
+    /**
+     * Führt ein SQL-Skript aus dem Classpath aus.
+     */
     private void executeScript(String classpathSql) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         populator.addScript(new ClassPathResource(classpathSql));
@@ -87,6 +105,10 @@ public class DatabaseCreateTables {
         populator.execute(dataSource);
     }
 
+    /**
+     * Leert alle existierenden mt_* Tabellen
+     * unter Beachtung von FK-Abhängigkeiten.
+     */
     private void resetAllTables(boolean isH2) {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
@@ -116,6 +138,10 @@ public class DatabaseCreateTables {
         }
     }
 
+    /**
+     * Ermittelt alle existierenden mt_* Tabellen
+     * in stabiler (Child → Parent) Reihenfolge.
+     */
     private List<String> resolveTablesForReset() {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData meta = con.getMetaData();
@@ -175,6 +201,10 @@ public class DatabaseCreateTables {
         return "`" + identifier + "`";
     }
 
+    /**
+     * Legt Beispiel-User und Medical-Staff an.
+     * Passwort wird aus Environment gelesen.
+     */
     private void seedUsersAndStaff() {
         String seedPw = env.getProperty("MEDITRACK_SEED_PASSWORD");
         if (seedPw == null || seedPw.isBlank()) {
@@ -208,6 +238,9 @@ public class DatabaseCreateTables {
         log.warn("🌱 SEED abgeschlossen.");
     }
 
+    /**
+     * Insert oder Update eines Users anhand der E-Mail.
+     */
     private String upsertUser(JdbcTemplate jdbc, SeedUser u, String pwHash) {
         // Existiert per email?
         List<String> ids = jdbc.query(
@@ -235,6 +268,10 @@ public class DatabaseCreateTables {
         }
     }
 
+    /**
+     * Insert oder Update eines Medical-Staff-Datensatzes.
+     * Berücksichtigt optionale Spalten.
+     */
     private void upsertMedicalStaff(JdbcTemplate jdbc, String userId, String username) {
         boolean hasFirstName = columnExists("mt_medical_staff", "first_name");
         boolean hasLastName = columnExists("mt_medical_staff", "last_name");
@@ -269,6 +306,9 @@ public class DatabaseCreateTables {
         log.info("   ➕/♻️ upserted mt_medical_staff for {} (user_id={})", username, userId);
     }
 
+    /**
+     * Prüft, ob eine Spalte in einer Tabelle existiert.
+     */
     private boolean columnExists(String table, String column) {
         try (Connection c = dataSource.getConnection()) {
             DatabaseMetaData md = c.getMetaData();
@@ -285,11 +325,17 @@ public class DatabaseCreateTables {
         return false;
     }
 
+    /**
+     * Liest Boolean-Property mit Default.
+     */
     private boolean bool(String key, boolean def) {
         String v = env.getProperty(key);
         return (v == null) ? def : Boolean.parseBoolean(v);
     }
 
+    /**
+     * Ermittelt JDBC-URL der aktuellen Verbindung.
+     */
     private String jdbcUrl() {
         try (Connection c = dataSource.getConnection()) {
             return c.getMetaData().getURL();
@@ -298,5 +344,8 @@ public class DatabaseCreateTables {
         }
     }
 
+    /**
+     * Interne Struktur für Seed-Definitionen.
+     */
     private record SeedUser(String username, String email, String role, boolean createStaff) {}
 }

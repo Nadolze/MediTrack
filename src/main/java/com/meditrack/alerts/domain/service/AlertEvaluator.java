@@ -18,12 +18,16 @@ import java.util.Optional;
  */
 public class AlertEvaluator {
 
+    // Katalog fachlicher Grenzwerte (aus dem vitals-BC)
     private final ThresholdCatalog thresholds;
 
     public AlertEvaluator(ThresholdCatalog thresholds) {
         this.thresholds = thresholds;
     }
 
+    /**
+     * Bewertet einen Vitalwert.
+     */
     public Optional<EvaluationResult> evaluate(VitalType type, double value, Unit unit) {
 
         // O2 ist "kritisch" bei Unterschreitung -> Threshold nutzt MIN
@@ -51,6 +55,9 @@ public class AlertEvaluator {
         return Optional.empty();
     }
 
+    /**
+     * Erzeugt eine Nachricht.
+     */
     private String buildMessage(VitalType type, double value, Unit unit, Severity severity) {
         return switch (severity) {
             case CRITICAL -> "KRITISCH: " + type + " = " + value + " " + unit.label();

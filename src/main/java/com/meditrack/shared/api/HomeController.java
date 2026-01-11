@@ -17,9 +17,11 @@ import java.util.List;
 @Controller
 public class HomeController {
 
+    // Optionaler JdbcTemplate für einfache DB-Zugriffe.
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
+    // DTO für Patientenauswahl im UI.
     public record PatientOption(String id, String label) {}
 
     @GetMapping("/")
@@ -32,6 +34,9 @@ public class HomeController {
         return renderLandingOrHome(session, model);
     }
 
+    /**
+     * Zentrale Render-Logik für Landing vs. Home.
+     */
     private String renderLandingOrHome(HttpSession session, Model model) {
         UserSession user = getCurrentUser(session);
 
@@ -79,6 +84,9 @@ public class HomeController {
         }
     }
 
+    /**
+     * Hilfsmethode zum sicheren Zugriff auf den eingeloggten Benutzer.
+     */
     private UserSession getCurrentUser(HttpSession session) {
         if (session == null) {
             return null;

@@ -10,6 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit-Tests für die Domänen-Entität User (TDD/DDD).
+ *
+ * Ziel:
+ * - User wird standardmäßig mit Rolle PATIENT erstellt
+ * - User kann mit expliziter Rolle erstellt werden
+ * - Null-Rolle im Konstruktor wirft IllegalArgumentException
+ * - changeRole() ändert die Rolle korrekt
  */
 class UserTest {
 

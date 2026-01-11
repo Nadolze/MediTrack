@@ -11,7 +11,14 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
-
+/**
+ * Unit-Tests für VitalReadingService.
+ *
+ * Ziel:
+ * - Prüfen, dass VitalReadings korrekt gespeichert werden
+ * - Prüfen, dass nach dem Speichern ein Event veröffentlicht wird
+ * - Prüfen, dass fehlende Pflichtfelder (patientId) validiert werden
+ */
 class VitalReadingServiceTest {
 
     @Test
