@@ -10,6 +10,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit-Tests für den Alert-Lebenszyklus (DDD Aggregate).
+ *
+ * Ziel:
+ * - Korrekte Initialisierung eines Alerts beim Triggern
+ * - Validierung der erlaubten Zustandsübergänge (OPEN → ACKNOWLEDGED → RESOLVED)
+ *
  */
 class AlertLifecycleTest {
 

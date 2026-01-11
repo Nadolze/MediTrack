@@ -25,35 +25,42 @@ public class UserController {
         this.userApplicationService = userApplicationService;
     }
 
+    // Zeigt das Login-Formular an.
     @GetMapping("/login")
     public String showLoginForm(Model model) {
         model.addAttribute("login", new UserLoginDto());
         return "user/login";
     }
 
+    // Verarbeitet den Login-Vorgang.
     @PostMapping("/login")
     public String handleLogin(
             @ModelAttribute("login") UserLoginDto form,
             Model model,
             HttpSession session
     ) {
+        // Authentifizierung über Application Service
         return userApplicationService.authenticate(form.getUsernameOrEmail(), form.getPassword())
                 .map(sessionUser -> {
+                    // Login erfolgreich
                     session.setAttribute(SessionKeys.LOGGED_IN_USER, sessionUser);
                     return "redirect:/home";
                 })
                 .orElseGet(() -> {
+                    // Login fehlgeschlagenen
                     model.addAttribute("error", "Benutzername/E-Mail oder Passwort ist falsch.");
                     return "user/login";
                 });
     }
 
+    // Zeigt das Registrierungsformular an.
     @GetMapping("/register")
     public String showRegistrationForm(Model model) {
         model.addAttribute("registration", new UserRegistrationDto());
         return "user/register";
     }
 
+    // Verarbeitet die Benutzerregistrierung.
     @PostMapping("/register")
     public String handleRegister(
             @ModelAttribute("registration") UserRegistrationDto form,
@@ -88,6 +95,7 @@ public class UserController {
         }
     }
 
+    // Logout per GET (z. B. Link).
     @GetMapping("/logout")
     public String logoutGet(HttpSession session) {
         if (session != null) {
@@ -96,6 +104,7 @@ public class UserController {
         return "redirect:/";
     }
 
+    // Logout per POST (z. B. Formular).
     @PostMapping("/logout")
     public String logoutPost(HttpSession session) {
         if (session != null) {

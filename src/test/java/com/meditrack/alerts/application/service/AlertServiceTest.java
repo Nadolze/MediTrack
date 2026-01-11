@@ -18,6 +18,13 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit-Test für AlertService.
+ *
+ * Ziel:
+ * - Sicherstellen, dass Alerts nur unter korrekten Bedingungen erzeugt werden
+ * - Verhindern von Duplikaten und unnötigen Persistierungen
+ */
 class AlertServiceTest {
 
     @Test

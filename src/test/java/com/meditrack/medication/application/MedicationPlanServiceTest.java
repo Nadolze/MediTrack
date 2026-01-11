@@ -14,7 +14,14 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
-
+/**
+ * Unit-Tests für den MedicationPlanService.
+ *
+ * Ziel:
+ * - Absicherung der fachlichen Zugriffsregeln (STAFF vs. PATIENT)
+ * - Korrekte Erstellung und Persistierung von MedicationPlans
+ *
+ */
 class MedicationPlanServiceTest {
 
     private MedicationPlanRepository medicationPlanRepository;

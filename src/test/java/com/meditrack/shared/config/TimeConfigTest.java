@@ -12,7 +12,15 @@ import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
-
+/**
+ * Test für die TimeConfig-Konfiguration.
+ *
+ * Ziel:
+ * - sicherstellen, dass die TimeConfig-Klasse existiert
+ * - prüfen, dass mindestens eine @Bean-Methode für zeitbezogene Typen
+ *   (Clock, Instant oder ZoneId) deklariert ist
+ * - absichern, dass zeitliche Abhängigkeiten zentral konfiguriert werden können
+ */
 class TimeConfigTest {
 
     @Test

@@ -14,7 +14,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * Integrationstest für das JPA-Repository VitalReadingRepository.
+ *
+ * Ziel:
+ * - Prüfen, dass VitalReadings für einen Patienten korrekt gefunden und nach
+ *   measuredAt absteigend sortiert zurückgegeben werden.
+ * - Verwendet eine In-Memory-H2-Datenbank über das "test"-Profil.
+ */
 @DataJpaTest
 @ActiveProfiles("test")
 class VitalReadingRepositoryTest {

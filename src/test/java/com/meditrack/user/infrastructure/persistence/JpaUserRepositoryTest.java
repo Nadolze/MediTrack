@@ -13,6 +13,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integrationstest für das JPA-Repository.
  *
+ * Ziel:
+ * - Sicherstellen, dass UserEntityJpa korrekt gespeichert wird
+ * - findByEmail und findByName liefern den gespeicherten Benutzer zurück
+ *
  * Es wird eine In-Memory-H2-Datenbank verwendet.
  * Das geschieht über das "test"-Profil (application-test.properties).
  */

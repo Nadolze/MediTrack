@@ -8,7 +8,14 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * Konfigurations-Robustheitstest für AlertDomainConfig.
+ *
+ * Ziel:
+ * - Sicherstellen, dass alle @Bean-Methoden der Konfiguration
+ *   tatsächlich im Spring-Context registriert werden
+ *
+ */
 class AlertDomainConfigTest {
 
     private final ApplicationContextRunner ctx = new ApplicationContextRunner()

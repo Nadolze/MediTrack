@@ -14,6 +14,13 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+/**
+ * Minimaler Robustheits-Test für AlertSummaryDto.
+ *
+ * Ziel:
+ * - DTO muss instanziierbar sein (auch nach Refactorings)
+ * - toString() darf nicht leer sein (Debug-/Logging-Tauglichkeit)
+ */
 class AlertSummaryDtoTest {
 
     @Test

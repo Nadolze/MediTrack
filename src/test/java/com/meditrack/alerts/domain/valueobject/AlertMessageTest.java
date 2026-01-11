@@ -4,6 +4,14 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * Unit-Tests für das Value Object AlertMessage.
+ *
+ * Ziel:
+ * - Durchsetzung fachlicher Invarianten für Alert-Texte
+ * - Schutz vor ungültigen oder schlecht formatierten Nachrichten
+ *
+ */
 class AlertMessageTest {
 
     @Test

@@ -9,7 +9,15 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * Minimaler Robustheits-Test für den VitalReadingCreatedListener.
+ *
+ * Ziel:
+ * - Sicherstellen, dass ein Event-Handler existiert
+ * - Verifizieren, dass der Listener beim Handling eines Events
+ *   mindestens eine seiner Dependencies benutzt
+ *
+ */
 class AssignmentLifecycleTest {
 
     @Test

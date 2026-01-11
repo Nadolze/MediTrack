@@ -19,6 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Repository-Integrationstests (H2) für den Medication-BC.
+ *
+ * Ziel:
+ * - Verifikation der Spring-Data-JPA-Queries gegen eine echte In-Memory-DB
+ * - Sicherstellen der fachlich erwarteten Sortierung und Filterung
+ *
  */
 @DataJpaTest
 @ActiveProfiles("test")

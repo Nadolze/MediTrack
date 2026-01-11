@@ -5,7 +5,14 @@ import com.meditrack.vitals.domain.valueobject.VitalType;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
-
+/**
+ * Unit-Test für die Domänenklasse ThresholdCatalog.
+ *
+ * Ziel:
+ * - Prüfen, dass für verschiedene VitalType-Werte die konfigurierten
+ *   Warn- und kritischen Schwellen korrekt zurückgegeben werden.
+ * - Prüfen, dass null als VitalType ein leeres Threshold-Objekt liefert.
+ */
 class ThresholdCatalogTest {
 
     @Test

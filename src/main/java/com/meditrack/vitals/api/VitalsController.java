@@ -38,9 +38,13 @@ import java.util.UUID;
 @RequestMapping("/vitals/readings")
 public class VitalsController {
 
+    // Repository für Persistenz der Vitalwerte
     private final VitalReadingRepository vitalReadingRepository;
+
+    // EventPublisher für BC-übergreifende Reaktionen (z.B. Alerts)
     private final ApplicationEventPublisher eventPublisher;
 
+    // Optionaler JdbcTemplate für einfache DB-Zugriffe.
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
@@ -53,12 +57,17 @@ public class VitalsController {
     /** Dropdown-Option für STAFF/ADMIN. */
     public record PatientOption(String id, String label) {}
 
+    /**
+     * Liste aller Vitalwerte für den effektiven Patienten.
+     * STAFF/ADMIN können Patient wählen, PATIENT sieht nur sich selbst.
+     */
     @GetMapping
     public String list(
             @RequestParam(value = "patientId", required = false) String patientIdParam,
             Model model,
             HttpSession session
     ) {
+        // Auth-Check
         UserSession user = (UserSession) session.getAttribute(SessionKeys.LOGGED_IN_USER);
         if (user == null) {
             return "redirect:/login";
@@ -68,21 +77,26 @@ public class VitalsController {
 
         String effectivePatientId;
         if (canSelectPatient) {
+            // Patient aus Request oder aus Session (ACTIVE_PATIENT_ID)
             String fromParam = (patientIdParam == null) ? "" : patientIdParam.trim();
 
             if (fromParam.isBlank()) {
                 Object active = session.getAttribute(SessionKeys.ACTIVE_PATIENT_ID);
                 fromParam = (active instanceof String) ? ((String) active).trim() : "";
             } else {
+                // explizite Auswahl merken
                 session.setAttribute(SessionKeys.ACTIVE_PATIENT_ID, fromParam);
             }
 
             effectivePatientId = fromParam;
+            // Dropdown-Liste für Auswahl laden
             model.addAttribute("patients", loadPatientsIfPossible());
         } else {
+            // Patient sieht nur seine eigenen Daten
             effectivePatientId = user.getUserId();
         }
 
+        // Gemeinsame View-Attribute
         model.addAttribute("user", user);
         model.addAttribute("canSelectPatient", canSelectPatient);
         model.addAttribute("patientId", effectivePatientId);
@@ -98,6 +112,9 @@ public class VitalsController {
         return "vitals/reading-list";
     }
 
+    /**
+     * Formular zum Anlegen eines neuen Vitalwerts.
+     */
     @GetMapping("/new")
     public String form(
             @RequestParam(value = "patientId", required = false) String patientIdParam,
@@ -113,6 +130,7 @@ public class VitalsController {
 
         String effectivePatientId;
         if (canSelectPatient) {
+            // gleiche Patienten-Auflösung wie in der Liste
             String fromParam = (patientIdParam == null) ? "" : patientIdParam.trim();
 
             if (fromParam.isBlank()) {
@@ -133,12 +151,17 @@ public class VitalsController {
         model.addAttribute("patientId", effectivePatientId);
         model.addAttribute("patientLabel", resolvePatientLabel(effectivePatientId));
 
+        // Enums für Select-Felder
         model.addAttribute("types", VitalType.values());
         model.addAttribute("units", Unit.values());
 
         return "vitals/reading-form";
     }
 
+    /**
+     * Speichert einen neuen Vitalwert.
+     * STAFF/ADMIN dürfen für andere Patienten erfassen.
+     */
     @PostMapping
     public String create(
             @RequestParam("vitalType") String vitalType,
@@ -155,6 +178,7 @@ public class VitalsController {
 
         boolean staffOrAdmin = user.hasAnyRole("ADMIN", "STAFF");
 
+        // Patient bestimmen (Form → Session → eigener User)
         String patientId;
         if (staffOrAdmin) {
             patientId = (patientIdFromForm == null) ? "" : patientIdFromForm.trim();
@@ -172,6 +196,7 @@ public class VitalsController {
             return "redirect:/vitals/readings/new";
         }
 
+        // Sicherstellen, dass Patient in mt_patient existiert
         if (staffOrAdmin) {
             session.setAttribute(SessionKeys.ACTIVE_PATIENT_ID, patientId);
             ensurePatientRowExists(patientId);
@@ -183,6 +208,7 @@ public class VitalsController {
             recordedByStaffId = ensureMedicalStaffRowExistsForUser(user.getUserId(), user.getUsername());
         }
 
+        // Domain-Objekt erzeugen
         VitalReading reading = VitalReading.create(
                 new PatientId(patientId),
                 VitalType.valueOf(vitalType),
@@ -208,6 +234,9 @@ public class VitalsController {
         return "redirect:/vitals/readings";
     }
 
+    /**
+     * Lädt Patienten für Dropdown (nur wenn JdbcTemplate verfügbar).
+     */
     private List<PatientOption> loadPatientsIfPossible() {
         if (jdbcTemplate == null) return Collections.emptyList();
 
@@ -218,6 +247,7 @@ public class VitalsController {
                         String id = rs.getString("id");
                         String name = rs.getString("name");
                         String email = rs.getString("email");
+                        // Fallback-Reihenfolge für Anzeige
                         String label = (name != null && !name.isBlank())
                                 ? name
                                 : (email != null && !email.isBlank() ? email : id);
@@ -229,6 +259,9 @@ public class VitalsController {
         }
     }
 
+    /**
+     * Stellt sicher, dass ein Patient-Datensatz existiert (FK-Sicherheit).
+     */
     private void ensurePatientRowExists(String userId) {
         if (jdbcTemplate == null || userId == null || userId.isBlank()) return;
 
@@ -240,6 +273,7 @@ public class VitalsController {
             );
             if (cnt != null && cnt > 0) return;
 
+            // Name aus mt_user ableiten
             String name;
             try {
                 name = jdbcTemplate.queryForObject(
@@ -253,6 +287,7 @@ public class VitalsController {
 
             if (name == null || name.isBlank()) name = userId;
 
+            // primitive Vor-/Nachnamen-Aufteilung
             String first = name;
             String last = "";
             String[] parts = name.trim().split("\\s+", 2);
@@ -270,6 +305,9 @@ public class VitalsController {
         }
     }
 
+    /**
+     * Liefert oder erzeugt einen mt_medical_staff-Eintrag für den User.
+     */
     private String ensureMedicalStaffRowExistsForUser(String userId, String username) {
         if (jdbcTemplate == null || userId == null || userId.isBlank()) return null;
 
@@ -287,6 +325,7 @@ public class VitalsController {
 
         String staffId = UUID.randomUUID().toString();
 
+        // Anzeige-Name bestimmen
         String displayName = (username == null || username.isBlank()) ? userId : username;
         try {
             String name = jdbcTemplate.queryForObject("SELECT name FROM mt_user WHERE id = ?", String.class, userId);
@@ -309,6 +348,7 @@ public class VitalsController {
             );
             return staffId;
         } catch (Exception ignored) {
+            // Fallback auf Minimal-Insert
             try {
                 jdbcTemplate.update(
                         "INSERT INTO mt_medical_staff (id, user_id, display_name) VALUES (?,?,?)",
@@ -321,6 +361,9 @@ public class VitalsController {
         }
     }
 
+    /**
+     * Ermittelt lesbaren Anzeigenamen für Patienten.
+     */
     private String resolvePatientLabel(String patientId) {
         if (patientId == null || patientId.isBlank()) return "";
         if (jdbcTemplate == null) return patientId;

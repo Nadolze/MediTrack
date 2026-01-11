@@ -12,10 +12,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
+// Application Service für den Assignment-BC.
 @Service
 public class AssignmentService {
 
+    // Repository für Zugriff auf Assignments (Aggregate)
     private final AssignmentRepository repository;
+
+    // Clock für testbare Zeitpunkte
     private final Clock clock;
 
     public AssignmentService(AssignmentRepository repository, Clock clock) {
@@ -36,6 +40,7 @@ public class AssignmentService {
         }
         AssignmentRole role = (cmd.role() == null) ? AssignmentRole.SUPPORT : cmd.role();
 
+        // keine doppelte ACTIVE-Zuweisung
         boolean exists = repository.existsByPatientIdAndStaffIdAndStatus(
                 cmd.patientId(),
                 cmd.staffId(),
@@ -45,6 +50,7 @@ public class AssignmentService {
             throw new IllegalStateException("Diese Zuweisung existiert bereits (ACTIVE).");
         }
 
+        // Erzeugung des Aggregates
         Assignment assignment = Assignment.assign(
                 new PatientId(cmd.patientId()),
                 new StaffId(cmd.staffId()),
@@ -57,6 +63,10 @@ public class AssignmentService {
         return AssignmentSummaryDto.from(assignment);
     }
 
+    /**
+     * Liefert alle aktiven Zuweisungen eines Patienten
+     * (absteigend nach Erstellungsdatum).
+     */
     public List<AssignmentSummaryDto> listActiveForPatient(String patientId) {
         if (patientId == null || patientId.isBlank()) {
             return List.of();
@@ -68,6 +78,13 @@ public class AssignmentService {
                 .toList();
     }
 
+    /**
+     * Beendet eine bestehende Zuweisung.
+     *
+     * Fachliche Regel:
+     * - Assignment muss existieren
+     * - Endzeitpunkt wird über Clock gesetzt
+     */
     public void end(String assignmentId, String endedByUserId) {
         if (assignmentId == null || assignmentId.isBlank()) {
             throw new IllegalArgumentException("assignmentId darf nicht leer sein");

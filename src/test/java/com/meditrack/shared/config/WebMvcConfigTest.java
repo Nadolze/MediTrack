@@ -9,7 +9,15 @@ import org.springframework.core.convert.ConversionService;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+/**
+ * Integrationstest für die WebMvcConfig.
+ *
+ * Ziel:
+ * - sicherstellen, dass ein mvcConversionService-Bean existiert
+ * - prüfen, dass Standard-Typkonvertierungen für Web-Requests verfügbar sind
+ *   (z.B. String → LocalDate für Request-Parameter/Formulare)
+ * - absichern, dass MVC-Datenbindung korrekt konfiguriert ist
+ */
 @SpringBootTest
 class WebMvcConfigTest {
 

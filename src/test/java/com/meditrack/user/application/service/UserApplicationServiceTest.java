@@ -18,7 +18,14 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-
+/**
+ * Unit-Tests für UserApplicationService.
+ *
+ * Ziel:
+ * - registerUser speichert einen neuen User als PATIENT inkl. gehashter Passwort
+ * - authenticate liefert bei korrektem Passwort ein UserSession-Objekt
+ * - authenticate liefert bei falschem Passwort empty
+ */
 @ExtendWith(MockitoExtension.class)
 class UserApplicationServiceTest {
 

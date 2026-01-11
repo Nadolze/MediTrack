@@ -6,6 +6,9 @@ import com.meditrack.alerts.domain.valueobject.Severity;
 
 import java.time.LocalDateTime;
 
+/**
+ * DTO für die Anzeige eines Alerts.
+ */
 public record AlertSummaryDto(
         String id,
         String patientId,

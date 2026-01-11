@@ -13,6 +13,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Web-/MVC-Test für die Alert-Übersichtsseite.
+ *
+ * Ziel:
+ * - Absicherung des Zugriffsverhaltens auf /alerts
+ * - Prüfung der Session-basierten Authentifizierung
+ *
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")

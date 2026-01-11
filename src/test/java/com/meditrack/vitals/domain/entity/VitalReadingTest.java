@@ -6,7 +6,14 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
-
+/**
+ * Unit-Tests für die Domänen-Entität VitalReading und zugehörige Value Objects.
+ *
+ * Ziel:
+ * - Prüfen, dass VitalReadings korrekt erzeugt werden (ID, Felder)
+ * - Validierung von MeasurementValue (keine NaN-Werte)
+ * - Validierung von PatientId (nicht leer)
+ */
 class VitalReadingTest {
 
     @Test

@@ -14,6 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Tests für die Rollenlogik auf der Home-Seite.
  *
+ * Ziel:
+ * - Sicherstellen, dass der HomeController korrekt nach Benutzerrolle reagiert
+ * - Trennung zwischen PATIENT- und STAFF-Sicht verifizieren
+ *
  * Hinweis: Der Controller nutzt optional ein JdbcTemplate. In diesem Unit-Test
  * wird es nicht injiziert (bleibt null), aber die Seite soll trotzdem rendern.
  */
